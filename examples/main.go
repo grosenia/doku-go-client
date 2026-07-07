@@ -1,0 +1,170 @@
+// Command examples is a manual CLI for exercising doku-go-client against
+// DOKU's sandbox. Copy config-sample.props to config.props and fill in real
+// sandbox credentials + the path to your RSA private key PEM before running.
+package main
+
+import (
+	"fmt"
+	"os"
+	"strings"
+	"time"
+
+	dokugo "github.com/grosenia/doku-go-client"
+)
+
+func loadProps(path string) (map[string]string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	props := map[string]string{}
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		props[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
+	}
+	return props, nil
+}
+
+func mustGateway(props map[string]string) *dokugo.Gateway {
+	keyPath := props["DOKU_PRIVATE_KEY_PATH"]
+	keyPEM, err := os.ReadFile(keyPath)
+	if err != nil {
+		logFail(fmt.Sprintf("read private key %s: %v", keyPath, err))
+		os.Exit(1)
+	}
+	sandbox := props["DOKU_SANDBOX"] != "false"
+	client, err := dokugo.NewClient(props["DOKU_CLIENT_ID"], props["DOKU_SECRET_KEY"], keyPEM, sandbox)
+	if err != nil {
+		logFail(fmt.Sprintf("NewClient: %v", err))
+		os.Exit(1)
+	}
+	return dokugo.NewGateway(&client)
+}
+
+func arg(i int, fallback string) string {
+	if i < len(os.Args) {
+		return os.Args[i]
+	}
+	return fallback
+}
+
+func main() {
+	if len(os.Args) < 2 {
+		fmt.Println("usage: go run . <command> [customerNo] [virtualAccountNo]")
+		fmt.Println("commands: create-va-static, create-va-single-use, delete-va, update-va, check-status")
+		os.Exit(1)
+	}
+	command := os.Args[1]
+
+	props, err := loadProps("config.props")
+	if err != nil {
+		logFail(fmt.Sprintf("load config.props (copy from config-sample.props first): %v", err))
+		os.Exit(1)
+	}
+
+	gw := mustGateway(props)
+	bank := props["DOKU_BANK"]
+	partnerServiceID := props["DOKU_PARTNER_SERVICE_ID"]
+	trxID := fmt.Sprintf("TRX-%d", time.Now().Unix())
+
+	switch command {
+	case "create-va-static":
+		logBanner("Create Static VA")
+		customerNo := arg(2, "00000000000000000001")
+		resp, err := gw.CreateVA(dokugo.NewStaticVARequest(bank, partnerServiceID, customerNo, "Example Customer", trxID, dokugo.Amount{Value: "150000.00", Currency: "IDR"}))
+		if err != nil {
+			logFail(err.Error())
+			return
+		}
+		if resp.ErrorStatus {
+			logFail(fmt.Sprintf("%s: %s", resp.ResponseCode, resp.ResponseMessage))
+			return
+		}
+		logOK(fmt.Sprintf("virtualAccountNo=%s", resp.VirtualAccountData.VirtualAccountNo))
+
+	case "create-va-single-use":
+		logBanner("Create Single-Use VA")
+		customerNo := arg(2, "00000000000000000002")
+		resp, err := gw.CreateVA(dokugo.NewSingleUseVARequest(bank, partnerServiceID, customerNo, "Example Customer", trxID, dokugo.Amount{Value: "75000.00", Currency: "IDR"}))
+		if err != nil {
+			logFail(err.Error())
+			return
+		}
+		if resp.ErrorStatus {
+			logFail(fmt.Sprintf("%s: %s", resp.ResponseCode, resp.ResponseMessage))
+			return
+		}
+		logOK(fmt.Sprintf("virtualAccountNo=%s", resp.VirtualAccountData.VirtualAccountNo))
+
+	case "delete-va":
+		logBanner("Delete VA")
+		customerNo := arg(2, "")
+		virtualAccountNo := arg(3, partnerServiceID+customerNo)
+		resp, err := gw.DeleteVA(&dokugo.DeleteVARequest{
+			PartnerServiceID: partnerServiceID,
+			CustomerNo:       customerNo,
+			VirtualAccountNo: virtualAccountNo,
+			TrxID:            trxID,
+		})
+		if err != nil {
+			logFail(err.Error())
+			return
+		}
+		if resp.ErrorStatus {
+			logFail(fmt.Sprintf("%s: %s", resp.ResponseCode, resp.ResponseMessage))
+			return
+		}
+		logOK("deleted")
+
+	case "update-va":
+		logBanner("Update VA")
+		customerNo := arg(2, "")
+		virtualAccountNo := arg(3, partnerServiceID+customerNo)
+		resp, err := gw.UpdateVA(&dokugo.UpdateVARequest{
+			PartnerServiceID: partnerServiceID,
+			CustomerNo:       customerNo,
+			VirtualAccountNo: virtualAccountNo,
+			TrxID:            trxID,
+		})
+		if err != nil {
+			logFail(err.Error())
+			return
+		}
+		if resp.ErrorStatus {
+			logFail(fmt.Sprintf("%s: %s", resp.ResponseCode, resp.ResponseMessage))
+			return
+		}
+		logOK("updated")
+
+	case "check-status":
+		logBanner("Check Status")
+		customerNo := arg(2, "")
+		virtualAccountNo := arg(3, partnerServiceID+customerNo)
+		resp, err := gw.CheckStatus(&dokugo.CheckStatusRequest{
+			PartnerServiceID: partnerServiceID,
+			CustomerNo:       customerNo,
+			VirtualAccountNo: virtualAccountNo,
+			AdditionalInfo:   map[string]interface{}{},
+		})
+		if err != nil {
+			logFail(err.Error())
+			return
+		}
+		if resp.ErrorStatus {
+			logFail(fmt.Sprintf("%s: %s", resp.ResponseCode, resp.ResponseMessage))
+			return
+		}
+		logOK(fmt.Sprintf("paidAmount=%s %s", resp.VirtualAccountData.PaidAmount.Value, resp.VirtualAccountData.PaidAmount.Currency))
+
+	default:
+		fmt.Println("unknown command:", command)
+		os.Exit(1)
+	}
+}

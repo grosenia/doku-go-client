@@ -1,0 +1,6 @@
+examples/config.props
+*.pem
+*.key
+.DS_Store
+examples/examples
+*.exe
