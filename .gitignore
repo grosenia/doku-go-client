@@ -4,3 +4,4 @@ examples/config.props
 .DS_Store
 examples/examples
 *.exe
+*.bak

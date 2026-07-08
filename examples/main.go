@@ -27,7 +27,7 @@ func loadProps(path string) (map[string]string, error) {
 		if len(parts) != 2 {
 			continue
 		}
-		props[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
+		props[strings.TrimSpace(parts[0])] = parts[1]
 	}
 	return props, nil
 }
@@ -57,8 +57,12 @@ func arg(i int, fallback string) string {
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("usage: go run . <command> [customerNo] [virtualAccountNo]")
-		fmt.Println("commands: create-va-static, create-va-single-use, delete-va, update-va, check-status")
+		fmt.Println("usage: go run . <command> [args...]")
+		fmt.Println("VA commands: create-va-static, create-va-single-use, delete-va, update-va, check-status")
+		fmt.Println("disbursement commands:")
+		fmt.Println("  account-inquiry <beneficiaryAccountNumber> <beneficiaryBankCode> [amount]")
+		fmt.Println("  transfer-bank <beneficiaryAccountNumber> <beneficiaryBankCode> <sessionId> [amount]")
+		fmt.Println("  balance-inquiry <accountNo>")
 		os.Exit(1)
 	}
 	command := os.Args[1]
@@ -106,7 +110,7 @@ func main() {
 	case "delete-va":
 		logBanner("Delete VA")
 		customerNo := arg(2, "")
-		virtualAccountNo := arg(3, partnerServiceID+customerNo)
+		virtualAccountNo := arg(3, dokugo.ZeroPadPartnerServiceID(partnerServiceID)+customerNo)
 		resp, err := gw.DeleteVA(&dokugo.DeleteVARequest{
 			PartnerServiceID: partnerServiceID,
 			CustomerNo:       customerNo,
@@ -126,7 +130,7 @@ func main() {
 	case "update-va":
 		logBanner("Update VA")
 		customerNo := arg(2, "")
-		virtualAccountNo := arg(3, partnerServiceID+customerNo)
+		virtualAccountNo := arg(3, dokugo.ZeroPadPartnerServiceID(partnerServiceID)+customerNo)
 		resp, err := gw.UpdateVA(&dokugo.UpdateVARequest{
 			PartnerServiceID: partnerServiceID,
 			CustomerNo:       customerNo,
@@ -146,7 +150,7 @@ func main() {
 	case "check-status":
 		logBanner("Check Status")
 		customerNo := arg(2, "")
-		virtualAccountNo := arg(3, partnerServiceID+customerNo)
+		virtualAccountNo := arg(3, dokugo.ZeroPadPartnerServiceID(partnerServiceID)+customerNo)
 		resp, err := gw.CheckStatus(&dokugo.CheckStatusRequest{
 			PartnerServiceID: partnerServiceID,
 			CustomerNo:       customerNo,
@@ -162,6 +166,79 @@ func main() {
 			return
 		}
 		logOK(fmt.Sprintf("paidAmount=%s %s", resp.VirtualAccountData.PaidAmount.Value, resp.VirtualAccountData.PaidAmount.Currency))
+
+	case "account-inquiry":
+		logBanner("Account Inquiry")
+		beneficiaryAccountNumber := arg(2, "")
+		beneficiaryBankCode := arg(3, "")
+		amount := arg(4, "100000.00")
+		refNo := fmt.Sprintf("REF-%d", time.Now().Unix())
+		resp, err := gw.AccountInquiry(&dokugo.AccountInquiryRequest{
+			PartnerReferenceNo:       refNo,
+			CustomerNumber:           props["DOKU_CUSTOMER_NUMBER"],
+			BeneficiaryAccountNumber: beneficiaryAccountNumber,
+			Amount:                   dokugo.Amount{Value: amount, Currency: "IDR"},
+			AdditionalInfo:           dokugo.AccountInquiryAdditionalInfo{BeneficiaryBankCode: beneficiaryBankCode},
+		})
+		if err != nil {
+			logFail(err.Error())
+			return
+		}
+		if resp.ErrorStatus {
+			logFail(fmt.Sprintf("%s: %s", resp.ResponseCode, resp.ResponseMessage))
+			return
+		}
+		logOK(fmt.Sprintf("beneficiaryAccountName=%s sessionId=%s", resp.BeneficiaryAccountName, resp.SessionID))
+
+	case "transfer-bank":
+		logBanner("Transfer Bank")
+		beneficiaryAccountNumber := arg(2, "")
+		beneficiaryBankCode := arg(3, "")
+		sessionID := arg(4, "")
+		amount := arg(5, "100000.00")
+		refNo := fmt.Sprintf("PAYOUT-%d", time.Now().Unix())
+		resp, err := gw.TransferBank(&dokugo.TransferBankRequest{
+			PartnerReferenceNo:       refNo,
+			CustomerNumber:           props["DOKU_CUSTOMER_NUMBER"],
+			BeneficiaryAccountNumber: beneficiaryAccountNumber,
+			BeneficiaryBankCode:      beneficiaryBankCode,
+			Amount:                   dokugo.Amount{Value: amount, Currency: "IDR"},
+			SessionID:                sessionID,
+			AdditionalInfo: dokugo.TransferBankAdditionalInfo{
+				BeneficiaryFirstName:   "Example",
+				BeneficiaryLastName:    "Customer",
+				BeneficiaryPhoneNumber: "0812345678",
+				BeneficiaryAccountName: "Example Customer",
+				SenderCountryCode:      "ID",
+				SenderFirstName:        "Grosenia",
+				SenderLastName:         "Niaga",
+				SenderPersonalID:       "1234567890123456",
+				SenderPersonalIDType:   "KTP",
+			},
+		})
+		if err != nil {
+			logFail(err.Error())
+			return
+		}
+		if resp.ErrorStatus {
+			logFail(fmt.Sprintf("%s: %s", resp.ResponseCode, resp.ResponseMessage))
+			return
+		}
+		logOK(fmt.Sprintf("referenceNo=%s partnerReferenceNo=%s", resp.ReferenceNo, resp.PartnerReferenceNo))
+
+	case "balance-inquiry":
+		logBanner("Balance Inquiry")
+		accountNo := arg(2, "")
+		resp, err := gw.BalanceInquiry(&dokugo.BalanceInquiryRequest{AccountNo: accountNo})
+		if err != nil {
+			logFail(err.Error())
+			return
+		}
+		if resp.ErrorStatus {
+			logFail(fmt.Sprintf("%s: %s", resp.ResponseCode, resp.ResponseMessage))
+			return
+		}
+		logOK(fmt.Sprintf("name=%s avaliableBalance=%s %s", resp.Name, resp.AccountInfos.AvaliableBalance.Value, resp.AccountInfos.AvaliableBalance.Currency))
 
 	default:
 		fmt.Println("unknown command:", command)

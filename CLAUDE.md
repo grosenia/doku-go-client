@@ -34,6 +34,24 @@ via a `replace` directive during development (see root `core-api/go.mod`).
 - `cd examples && go run . <command>` — manual exploration against sandbox, reads `config.props`
   (gitignored; copy from `config-sample.props`).
 
+## Disbursement (Kirim DOKU)
+
+Pays FROM Grosenia TO a bank account (e.g. seller payout) — the reverse direction of Virtual
+Account, which collects FROM a buyer TO Grosenia. Same SNAP auth scheme (symmetric HMAC per call,
+asymmetric only for the token endpoint), different path family (`/snap/v1.1/emoney/...` and
+`/snap/v1.1/balance-inquiry`, vs VA's `/virtual-accounts/bi-snap-va/v1.1/...`).
+
+Flow: **Account Inquiry** (validate the destination account, get a `sessionId`) → **Balance
+Inquiry** (check Grosenia's own DOKU balance, optional/informational) → **Transfer Bank** (moves
+the money, `sessionId` from Account Inquiry required) → **Check Status** (poll for completion).
+
+`CheckDisbursementStatus`'s endpoint path is a **guess**, not confirmed — DOKU's own docs page for
+it has a genuine documentation bug (titled "KIRIMDOKU Check Status" but the embedded OpenAPI spec
+is actually the QR `qr-mpm-status` endpoint). Don't trust it in production without confirming with
+DOKU directly. See `FEATURES.md`/`CHECKLIST.md` for the full list of disbursement gaps (including
+the two webhook types that aren't implemented at all — their schemas aren't extractable from
+DOKU's public docs).
+
 ## Adding a new bank
 
 Add an entry to `BankChannels` in `constants.go` — no other code changes needed for VA creation.

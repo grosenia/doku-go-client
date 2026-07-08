@@ -1,5 +1,7 @@
 package dokugo
 
+import "strings"
+
 // Amount is DOKU's wire format for monetary values: a decimal string (not a
 // float — DOKU's own examples always show 2 decimal places, e.g. "11500.00"),
 // plus an ISO 4217 currency code.
@@ -47,6 +49,19 @@ type CreateVARequest struct {
 }
 
 func boolPtr(b bool) *bool { return &b }
+
+// ZeroPadPartnerServiceID zero-pads partnerServiceID to 8 digits for use
+// inside virtualAccountNo. DOKU's docs specify partnerServiceId itself as
+// space-padded to 8 chars (e.g. "   19008"), but require the zero-padded form
+// (e.g. "00019008") when composing virtualAccountNo — using the space-padded
+// form there produces an invalid VA number containing literal spaces.
+func ZeroPadPartnerServiceID(partnerServiceID string) string {
+	trimmed := strings.TrimSpace(partnerServiceID)
+	if len(trimmed) >= 8 {
+		return trimmed
+	}
+	return strings.Repeat("0", 8-len(trimmed)) + trimmed
+}
 
 // newCreateVARequest builds the common fields shared by the Static and
 // Non-static constructors below. bankKey must be a key present in

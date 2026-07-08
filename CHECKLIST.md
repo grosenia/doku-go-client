@@ -13,6 +13,10 @@ Gate before `core-api` depends on a tagged (non-`replace`) version of this libra
 | `CheckStatus` | ✅ `TestScenario05_CheckStatus_Success` / `_Fail_NotPaid` | ✅ (part of round trip) | `check-status` |
 | `VerifyWebhookSignature` | ✅ valid / tampered / wrong-secret | — (no live webhook sender in sandbox testing) | — |
 | Token caching | ✅ reuse-within-expiry / refresh-after-expiry | implicit (every integration call) | — |
+| `AccountInquiry` | ✅ `TestScenario08_AccountInquiry_Success` | — | `account-inquiry` |
+| `TransferBank` | ✅ `TestScenario09_TransferBank_Success` / `TestScenario10_..._Fail_DokuError` | — | `transfer-bank` |
+| `BalanceInquiry` | ✅ `TestScenario11_BalanceInquiry_Success` | — | `balance-inquiry` |
+| `CheckDisbursementStatus` | ❌ no test — path unconfirmed, see gaps below | — | — |
 
 ## Helper/primitive coverage
 
@@ -26,6 +30,9 @@ Gate before `core-api` depends on a tagged (non-`replace`) version of this libra
 - Only BCA is seeded in `BankChannels` — add + validate other banks against sandbox before enabling them in `core-api` config.
 - `VerifyWebhookSignature`'s `accessToken` parameter role for inbound notifications is inferred from the outbound formula, not confirmed against a real DOKU-signed webhook — validate with DOKU or a captured real notification before depending on it in production.
 - `NewPaymentNotificationAck`'s `ResponseCode` ("2002500") is inferred from DOKU's numbering pattern, not a confirmed literal example — verify against sandbox.
+- `CheckDisbursementStatus`'s endpoint path (`pathDisbursementCheckStatus`) is a **guess** — DOKU's own docs page for this endpoint is bugged (schema mismatch, see `FEATURES.md`). Confirm the real path with DOKU before using this method against sandbox/production.
+- Disbursement `UnpaidNotification`/`RefundNotification` webhooks are not implemented — DOKU's docs reference an embedded OpenAPI schema not extractable from the public page. Needs either a captured real webhook payload or a direct answer from DOKU.
+- Disbursement (`AccountInquiry`/`TransferBank`/`BalanceInquiry`) has zero integration-test or real-sandbox coverage — the sandbox merchant account itself is currently blocked (BIN not fully provisioned for VA; unconfirmed whether the same blocker applies to Kirim DOKU), so these are unit/scenario-tested only.
 
 ## Gate to `core-api`
 

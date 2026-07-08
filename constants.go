@@ -23,5 +23,7 @@ const (
 // bank's exact partnerServiceId format/length with DOKU before enabling it in
 // production config; that's merchant-specific and not a public constant.
 var BankChannels = map[string]string{
-	"bca": "VIRTUAL_ACCOUNT_BCA",
+	"bca":     "VIRTUAL_ACCOUNT_BCA",
+	"bni":     "VIRTUAL_ACCOUNT_BNI",
+	"mandiri": "VIRTUAL_ACCOUNT_BANK_MANDIRI",
 }
