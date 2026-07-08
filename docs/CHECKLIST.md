@@ -25,7 +25,7 @@ Gate before `core-api` depends on a tagged (non-`replace`) version of this libra
 - ✅ `minifyJSON` — whitespace removed, key order and values preserved.
 - ✅ `ErrorResponse`/`markHTTPError` — set correctly via `errorMarker` interface promotion, exercised by every scenario test's failure case.
 
-## Known gaps (not blocking, tracked in `CLAUDE.md`/`FEATURES.md`)
+## Known gaps (not blocking, tracked in `../CLAUDE.md`/`FEATURES.md`)
 
 - Only BCA is seeded in `BankChannels` — add + validate other banks against sandbox before enabling them in `core-api` config.
 - `VerifyWebhookSignature`'s `accessToken` parameter role for inbound notifications is inferred from the outbound formula, not confirmed against a real DOKU-signed webhook — validate with DOKU or a captured real notification before depending on it in production.

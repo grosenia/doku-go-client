@@ -1,5 +1,5 @@
 > **Status: implemented.** This is the original design plan approved before writing any code
-> (2026-07-07). All phases below (0–5) were completed — see `CLAUDE.md`, `FEATURES.md`,
+> (2026-07-07). All phases below (0–5) were completed — see `../CLAUDE.md`, `FEATURES.md`,
 > `CHECKLIST.md`, and the actual source for the as-built state. Kept here as a historical record
 > of the design rationale (why SNAP, why the Client/Gateway split, why two signature schemes, etc.)
 > The task checkboxes below are left as originally written (unchecked) rather than retroactively

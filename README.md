@@ -1,8 +1,9 @@
 # doku-go-client
 
 Go client for [DOKU](https://doku.com)'s SNAP (Standar Nasional Open API Pembayaran) payment API.
-Currently covers Virtual Account (Static and Non-static/single-use), sharing one `CreateVA` endpoint
-distinguished by the `reusableStatus` flag.
+Covers Virtual Account (Static and Non-static/single-use, sharing one `CreateVA` endpoint
+distinguished by the `reusableStatus` flag) and Disbursement/Kirim DOKU (Account Inquiry, Transfer
+Bank, Balance Inquiry).
 
 Mirrors the conventions of the sibling `xendit-go-client` library used elsewhere in this org.
 
@@ -36,5 +37,6 @@ if err != nil {
 fmt.Println(resp.VirtualAccountData.VirtualAccountNo)
 ```
 
-See `CLAUDE.md` for architectural conventions, `TESTING.md` for how to run tests, and `examples/` for a
+See `CLAUDE.md` for architectural conventions, `docs/TESTING.md` for how to run tests, `docs/FEATURES.md`
+for endpoint coverage, `docs/CHECKLIST.md` for release gating/known gaps, and `examples/` for a
 runnable CLI against DOKU's sandbox.

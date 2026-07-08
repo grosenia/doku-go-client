@@ -48,9 +48,9 @@ the money, `sessionId` from Account Inquiry required) → **Check Status** (poll
 `CheckDisbursementStatus`'s endpoint path is a **guess**, not confirmed — DOKU's own docs page for
 it has a genuine documentation bug (titled "KIRIMDOKU Check Status" but the embedded OpenAPI spec
 is actually the QR `qr-mpm-status` endpoint). Don't trust it in production without confirming with
-DOKU directly. See `FEATURES.md`/`CHECKLIST.md` for the full list of disbursement gaps (including
-the two webhook types that aren't implemented at all — their schemas aren't extractable from
-DOKU's public docs).
+DOKU directly. See `docs/FEATURES.md`/`docs/CHECKLIST.md` for the full list of disbursement gaps
+(including the two webhook types that aren't implemented at all — their schemas aren't extractable
+from DOKU's public docs).
 
 ## Adding a new bank
 

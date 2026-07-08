@@ -32,4 +32,4 @@ DOKU SNAP API coverage, current state.
 - **Asymmetric** (RSA, SHA256withRSA): only `client.go`'s `requestNewAccessToken`, via `signAsymmetric`.
 - **Symmetric** (HMAC-SHA512, base64): every transactional `Gateway` method (via `gateway.go`'s `doRequest` → `signSymmetric`), and inbound webhook verification (`VerifyWebhookSignature`, same underlying function, different `endpointPath` argument).
 
-See `CLAUDE.md` for the reasoning behind each design choice.
+See `../CLAUDE.md` for the reasoning behind each design choice.
