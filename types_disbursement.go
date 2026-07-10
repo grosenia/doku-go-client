@@ -96,17 +96,12 @@ type BalanceInquiryRequest struct {
 	AccountNo          string `json:"accountNo"`                    // max 16
 }
 
-type balanceAmount struct {
-	Value    string `json:"value"`
-	Currency string `json:"currency"`
-}
-
 type BalanceInquiryResponseAccountInfos struct {
-	HoldAmount balanceAmount `json:"holdAmount"`
+	HoldAmount Amount `json:"holdAmount"`
 	// AvaliableBalance is spelled exactly as DOKU's own API returns it
 	// (missing the second "a" in "Available") — do not "fix" the JSON tag,
 	// it must match the wire format.
-	AvaliableBalance balanceAmount `json:"avaliableBalance"`
+	AvaliableBalance Amount `json:"avaliableBalance"`
 }
 
 type BalanceInquiryResponse struct {
@@ -114,7 +109,7 @@ type BalanceInquiryResponse struct {
 	Name           string                             `json:"name"`
 	AccountInfos   BalanceInquiryResponseAccountInfos `json:"accountInfos"`
 	AdditionalInfo struct {
-		CreditAlertLimit balanceAmount `json:"creditAlertLimit,omitempty"`
+		CreditAlertLimit Amount `json:"creditAlertLimit,omitempty"`
 	} `json:"additionalInfo,omitempty"`
 	ErrorResponse
 }

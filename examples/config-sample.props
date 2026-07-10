@@ -5,3 +5,7 @@ DOKU_SANDBOX=true
 DOKU_BANK=bca
 DOKU_PARTNER_SERVICE_ID=   19008
 DOKU_CUSTOMER_NUMBER=0812345678
+# DGPC: customerNo is just the merchant-assigned prefix digit — DOKU generates the
+# rest of the payment code itself. Per-bank prefix (from DOKU dashboard "BIN Rules"):
+# BCA=9, BNI=3, Mandiri=0. Do NOT invent a longer customerNo yourself.
+DOKU_CUSTOMER_NO_PREFIX=9

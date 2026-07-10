@@ -81,7 +81,7 @@ func main() {
 	switch command {
 	case "create-va-static":
 		logBanner("Create Static VA")
-		customerNo := arg(2, "00000000000000000001")
+		customerNo := arg(2, props["DOKU_CUSTOMER_NO_PREFIX"])
 		resp, err := gw.CreateVA(dokugo.NewStaticVARequest(bank, partnerServiceID, customerNo, "Example Customer", trxID, dokugo.Amount{Value: "150000.00", Currency: "IDR"}))
 		if err != nil {
 			logFail(err.Error())
@@ -95,7 +95,7 @@ func main() {
 
 	case "create-va-single-use":
 		logBanner("Create Single-Use VA")
-		customerNo := arg(2, "00000000000000000002")
+		customerNo := arg(2, props["DOKU_CUSTOMER_NO_PREFIX"])
 		resp, err := gw.CreateVA(dokugo.NewSingleUseVARequest(bank, partnerServiceID, customerNo, "Example Customer", trxID, dokugo.Amount{Value: "75000.00", Currency: "IDR"}))
 		if err != nil {
 			logFail(err.Error())

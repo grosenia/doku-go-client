@@ -27,12 +27,13 @@ Gate before `core-api` depends on a tagged (non-`replace`) version of this libra
 
 ## Known gaps (not blocking, tracked in `../CLAUDE.md`/`FEATURES.md`)
 
-- Only BCA is seeded in `BankChannels` — add + validate other banks against sandbox before enabling them in `core-api` config.
+- BCA/BNI/Mandiri are seeded in `BankChannels`, all three confirmed working against real sandbox
+  (2026-07-10) — add + validate any further bank the same way before enabling it in `core-api` config.
 - `VerifyWebhookSignature`'s `accessToken` parameter role for inbound notifications is inferred from the outbound formula, not confirmed against a real DOKU-signed webhook — validate with DOKU or a captured real notification before depending on it in production.
 - `NewPaymentNotificationAck`'s `ResponseCode` ("2002500") is inferred from DOKU's numbering pattern, not a confirmed literal example — verify against sandbox.
 - `CheckDisbursementStatus`'s endpoint path (`pathDisbursementCheckStatus`) is a **guess** — DOKU's own docs page for this endpoint is bugged (schema mismatch, see `FEATURES.md`). Confirm the real path with DOKU before using this method against sandbox/production.
 - Disbursement `UnpaidNotification`/`RefundNotification` webhooks are not implemented — DOKU's docs reference an embedded OpenAPI schema not extractable from the public page. Needs either a captured real webhook payload or a direct answer from DOKU.
-- Disbursement (`AccountInquiry`/`TransferBank`/`BalanceInquiry`) has zero integration-test or real-sandbox coverage — the sandbox merchant account itself is currently blocked (BIN not fully provisioned for VA; unconfirmed whether the same blocker applies to Kirim DOKU), so these are unit/scenario-tested only.
+- Disbursement (`AccountInquiry`/`TransferBank`/`BalanceInquiry`) still has zero real-sandbox coverage — VA's sandbox blocker is resolved (see `CLAUDE.md`'s `customerNo` note), but disbursement itself hasn't been tried against real sandbox yet, so these are unit/scenario-tested only.
 
 ## Gate to `core-api`
 

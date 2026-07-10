@@ -141,7 +141,7 @@ func TestScenario11_BalanceInquiry_Success(t *testing.T) {
 				AccountNo:     "1234567890123456",
 				Name:          "PT Grosenia Niaga Indonesia",
 				AccountInfos: BalanceInquiryResponseAccountInfos{
-					AvaliableBalance: balanceAmount{Value: "5000000.00", Currency: "IDR"},
+					AvaliableBalance: Amount{Value: "5000000.00", Currency: "IDR"},
 				},
 			})
 		},

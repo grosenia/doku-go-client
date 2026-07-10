@@ -24,6 +24,14 @@ via a `replace` directive during development (see root `core-api/go.mod`).
   `additionalInfo.virtualAccountConfig.reusableStatus`. `true` = Static (reusable), omitted/`false` =
   single-use (DOKU's default). Use `NewStaticVARequest`/`NewSingleUseVARequest` constructors rather than
   setting the flag by hand at call sites.
+- **DGPC's `customerNo` is just the merchant-assigned prefix digit (e.g. "9" for BCA), NOT a long
+  number you invent.** DOKU appends the rest of the payment code itself ("D" = DOKU-**generated**
+  Payment Code) to reach the required total VA length (16 digits for BCA). Confirmed against real
+  sandbox 2026-07-10: a made-up long `customerNo` (e.g. `"90000000"`) produced
+  `4032701: Feature Not Allowed [Identifier for BIN ... not configured properly]` on every bank —
+  looked exactly like an account-provisioning error, wasted a support thread — while
+  `customerNo = "9"` alone succeeds immediately. Per-bank prefix comes from DOKU's dashboard "BIN
+  Rules" page ("Prefix Customer No" column), not something to guess.
 
 ## Testing
 
