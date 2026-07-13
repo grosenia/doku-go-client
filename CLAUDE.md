@@ -32,6 +32,12 @@ via a `replace` directive during development (see root `core-api/go.mod`).
   looked exactly like an account-provisioning error, wasted a support thread — while
   `customerNo = "9"` alone succeeds immediately. Per-bank prefix comes from DOKU's dashboard "BIN
   Rules" page ("Prefix Customer No" column), not something to guess.
+- **`CheckStatus`'s `virtualAccountNo` for a DGPC-created VA is the short literal
+  `partnerServiceId + customerNo` (e.g. `"   19008" + "9"`) — NOT the full DOKU-generated number**
+  from `CreateVAResponseData.VirtualAccountNo` (that's only for display/payment). Confirmed 2026-07-11.
+  **`DeleteVA`'s requirement is still unconfirmed** — neither the short combo (`4043119 Invalid
+  Bill/Virtual Account`) nor the full generated number (`4033115 ... virtualAccountNo should be
+  equal to partnerServiceId + customerNo`) succeeds. Flagged in `integration_test.go`, not solved.
 
 ## Testing
 
