@@ -75,6 +75,29 @@ func TestVerifyTokenURLRequestSignature_WrongKey(t *testing.T) {
 	}
 }
 
+// TestVerifyTokenURLRequestSignature_LocalOffsetTimestamp locks in a real bug
+// found 2026-07-14 against DOKU's actual Payment Simulator: a genuine inbound
+// request used X-TIMESTAMP "2026-07-14T13:11:44+07:00" (local time WITH
+// offset), which asymmetricTimestampLayout ("...Z", UTC-only) failed to
+// parse, rejecting every real DOKU call with "invalid X-TIMESTAMP" before
+// the signature was ever checked.
+func TestVerifyTokenURLRequestSignature_LocalOffsetTimestamp(t *testing.T) {
+	_, pubPEM, priv := generateTestRSAKeyPair(t)
+	xTimestamp := time.Now().Format("2006-01-02T15:04:05-07:00") // local time WITH offset, like the real request
+	sig, err := signAsymmetric(priv, "test-client-id", xTimestamp)
+	if err != nil {
+		t.Fatalf("signAsymmetric: %v", err)
+	}
+
+	ok, err := VerifyTokenURLRequestSignature(pubPEM, "test-client-id", xTimestamp, sig)
+	if err != nil {
+		t.Fatalf("VerifyTokenURLRequestSignature error: %v", err)
+	}
+	if !ok {
+		t.Fatal("expected a local-time-with-offset X-TIMESTAMP to verify successfully")
+	}
+}
+
 func TestVerifyTokenURLRequestSignature_StaleTimestamp(t *testing.T) {
 	_, pubPEM, priv := generateTestRSAKeyPair(t)
 	staleTimestamp := formatAsymmetricTimestamp(time.Now().Add(-1 * time.Hour))

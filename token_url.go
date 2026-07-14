@@ -42,12 +42,19 @@ func ParseRSAPublicKeyPEM(pemBytes []byte) (*rsa.PublicKey, error) {
 // "DOKU Public Key" against the same asymmetric scheme as the B2B Get Token
 // endpoint (X-SIGNATURE = sign(xClientKey + "|" + xTimestamp) with DOKU's
 // private key), just with the roles reversed.
+//
+// X-TIMESTAMP format confirmed 2026-07-14 against a REAL sandbox request
+// (via DOKU's Payment Simulator): local time WITH offset (e.g.
+// "2026-07-14T13:11:44+07:00", symmetricTimestampLayout) — NOT the UTC/no-offset
+// format the outbound B2B Get Token endpoint itself uses. This reversed
+// direction does not mirror that detail of the B2B contract; don't assume it
+// does elsewhere either.
 func VerifyTokenURLRequestSignature(dokuPublicKeyPEM []byte, xClientKey, xTimestamp, xSignature string) (bool, error) {
 	pubKey, err := ParseRSAPublicKeyPEM(dokuPublicKeyPEM)
 	if err != nil {
 		return false, err
 	}
-	ts, err := time.Parse(asymmetricTimestampLayout, xTimestamp)
+	ts, err := time.Parse(symmetricTimestampLayout, xTimestamp)
 	if err != nil {
 		return false, errors.New("doku: invalid X-TIMESTAMP")
 	}
