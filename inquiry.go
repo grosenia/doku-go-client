@@ -19,23 +19,30 @@ type InquiryRequest struct {
 }
 
 // InquiryResponse is the response body our Inquiry URL handler must return.
+// Fields beyond the original capture (VirtualAccountName/VirtualAccountTrxType,
+// AdditionalInfo.Channel) added 2026-07-14 after a real DOKU sandbox call kept
+// showing "General Error" despite HTTP 200 — confirmed against the fuller
+// schema on developers.doku.com's Direct Inquiry section (BRI page).
 type InquiryResponse struct {
 	ResponseCode       string `json:"responseCode"`
 	ResponseMessage    string `json:"responseMessage"`
 	VirtualAccountData struct {
-		PartnerServiceID string `json:"partnerServiceId"`
-		CustomerNo       string `json:"customerNo"`
-		VirtualAccountNo string `json:"virtualAccountNo"`
-		InquiryRequestID string `json:"inquiryRequestId"`
-		TotalAmount      Amount `json:"totalAmount"`
-		InquiryStatus    string `json:"inquiryStatus"`
-		InquiryReason    struct {
+		PartnerServiceID      string `json:"partnerServiceId"`
+		CustomerNo            string `json:"customerNo"`
+		VirtualAccountNo      string `json:"virtualAccountNo"`
+		VirtualAccountName    string `json:"virtualAccountName"`
+		InquiryRequestID      string `json:"inquiryRequestId"`
+		TotalAmount           Amount `json:"totalAmount"`
+		VirtualAccountTrxType string `json:"virtualAccountTrxType"`
+		InquiryStatus         string `json:"inquiryStatus"`
+		InquiryReason         struct {
 			English   string `json:"english"`
 			Indonesia string `json:"indonesia"`
 		} `json:"inquiryReason"`
 	} `json:"virtualAccountData"`
 	AdditionalInfo struct {
-		TrxID string `json:"trxId,omitempty"`
+		Channel string `json:"channel,omitempty"`
+		TrxID   string `json:"trxId,omitempty"`
 	} `json:"additionalInfo,omitempty"`
 }
 
@@ -43,16 +50,21 @@ type InquiryResponse struct {
 // echoing the VA identity DOKU asked about, plus the amount we expect to be
 // paid. responseCode "2002500" follows DOKU's observed pattern (not a literal
 // confirmed example for this endpoint — verify against real sandbox).
-func NewInquiryResponseSuccess(req InquiryRequest, amount Amount, trxID string) InquiryResponse {
+// virtualAccountTrxType is always VATrxTypeClosed ("C") — every VA this
+// project creates is a fixed-bill (FIX_BILL) VA, never open/variable-amount.
+func NewInquiryResponseSuccess(req InquiryRequest, amount Amount, virtualAccountName, trxID string) InquiryResponse {
 	resp := InquiryResponse{ResponseCode: "2002500", ResponseMessage: "Successful"}
 	resp.VirtualAccountData.PartnerServiceID = req.PartnerServiceID
 	resp.VirtualAccountData.CustomerNo = req.CustomerNo
 	resp.VirtualAccountData.VirtualAccountNo = req.VirtualAccountNo
+	resp.VirtualAccountData.VirtualAccountName = virtualAccountName
 	resp.VirtualAccountData.InquiryRequestID = req.InquiryRequestID
 	resp.VirtualAccountData.TotalAmount = amount
+	resp.VirtualAccountData.VirtualAccountTrxType = VATrxTypeClosed
 	resp.VirtualAccountData.InquiryStatus = "00"
 	resp.VirtualAccountData.InquiryReason.English = "Success"
 	resp.VirtualAccountData.InquiryReason.Indonesia = "Sukses"
+	resp.AdditionalInfo.Channel = req.AdditionalInfo.Channel
 	resp.AdditionalInfo.TrxID = trxID
 	return resp
 }
@@ -68,5 +80,6 @@ func NewInquiryResponseNotFound(req InquiryRequest) InquiryResponse {
 	resp.VirtualAccountData.InquiryStatus = "01"
 	resp.VirtualAccountData.InquiryReason.English = "Bill not found"
 	resp.VirtualAccountData.InquiryReason.Indonesia = "Tagihan tidak ditemukan"
+	resp.AdditionalInfo.Channel = req.AdditionalInfo.Channel
 	return resp
 }
