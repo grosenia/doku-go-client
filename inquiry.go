@@ -31,18 +31,23 @@ type InquiryResponse struct {
 		CustomerNo            string `json:"customerNo"`
 		VirtualAccountNo      string `json:"virtualAccountNo"`
 		VirtualAccountName    string `json:"virtualAccountName"`
+		VirtualAccountEmail   string `json:"virtualAccountEmail"`
+		VirtualAccountPhone   string `json:"virtualAccountPhone"`
 		InquiryRequestID      string `json:"inquiryRequestId"`
 		TotalAmount           Amount `json:"totalAmount"`
 		VirtualAccountTrxType string `json:"virtualAccountTrxType"`
+		ExpiredDate           string `json:"expiredDate"`
 		InquiryStatus         string `json:"inquiryStatus"`
 		InquiryReason         struct {
 			English   string `json:"english"`
 			Indonesia string `json:"indonesia"`
 		} `json:"inquiryReason"`
+		FreeText []FreeText `json:"freeText"`
 	} `json:"virtualAccountData"`
 	AdditionalInfo struct {
-		Channel string `json:"channel,omitempty"`
-		TrxID   string `json:"trxId,omitempty"`
+		Channel              string                `json:"channel,omitempty"`
+		TrxID                string                `json:"trxId,omitempty"`
+		VirtualAccountConfig *VirtualAccountConfig `json:"virtualAccountConfig,omitempty"`
 	} `json:"additionalInfo,omitempty"`
 }
 
@@ -64,8 +69,13 @@ func NewInquiryResponseSuccess(req InquiryRequest, amount Amount, virtualAccount
 	resp.VirtualAccountData.InquiryStatus = "00"
 	resp.VirtualAccountData.InquiryReason.English = "Success"
 	resp.VirtualAccountData.InquiryReason.Indonesia = "Sukses"
+	resp.VirtualAccountData.FreeText = []FreeText{}
 	resp.AdditionalInfo.Channel = req.AdditionalInfo.Channel
 	resp.AdditionalInfo.TrxID = trxID
+	// DIPC VA numbers are inherently permanent/merchant-owned, unlike a
+	// single-use DGPC VA — reflect that as reusableStatus=true, matching the
+	// same VirtualAccountConfig struct CreateVA's Static VA option uses.
+	resp.AdditionalInfo.VirtualAccountConfig = &VirtualAccountConfig{ReusableStatus: boolPtr(true)}
 	return resp
 }
 
@@ -80,6 +90,7 @@ func NewInquiryResponseNotFound(req InquiryRequest) InquiryResponse {
 	resp.VirtualAccountData.InquiryStatus = "01"
 	resp.VirtualAccountData.InquiryReason.English = "Bill not found"
 	resp.VirtualAccountData.InquiryReason.Indonesia = "Tagihan tidak ditemukan"
+	resp.VirtualAccountData.FreeText = []FreeText{}
 	resp.AdditionalInfo.Channel = req.AdditionalInfo.Channel
 	return resp
 }
