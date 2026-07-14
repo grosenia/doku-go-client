@@ -1,0 +1,72 @@
+package dokugo
+
+// InquiryRequest is what DOKU POSTs to our own Inquiry URL for VA Direct
+// Inquiry (DIPC) — DOKU generates no VA numbers itself in this mode; we do,
+// so DOKU asks us to validate a VA number and supply the expected amount.
+// Schema captured 2026-07-11 from developers.doku.com's per-bank VA pages,
+// "Direct Inquiry" section (see docs/DOKU_FUNCTION_REFERENCE.md §3.5).
+type InquiryRequest struct {
+	PartnerServiceID string `json:"partnerServiceId"`
+	CustomerNo       string `json:"customerNo"`
+	VirtualAccountNo string `json:"virtualAccountNo"`
+	ChannelCode      string `json:"channelCode,omitempty"`
+	TrxDateInit      string `json:"trxDateInit,omitempty"`
+	Language         string `json:"language,omitempty"`
+	InquiryRequestID string `json:"inquiryRequestId"`
+	AdditionalInfo   struct {
+		Channel string `json:"channel"`
+	} `json:"additionalInfo,omitempty"`
+}
+
+// InquiryResponse is the response body our Inquiry URL handler must return.
+type InquiryResponse struct {
+	ResponseCode       string `json:"responseCode"`
+	ResponseMessage    string `json:"responseMessage"`
+	VirtualAccountData struct {
+		PartnerServiceID string `json:"partnerServiceId"`
+		CustomerNo       string `json:"customerNo"`
+		VirtualAccountNo string `json:"virtualAccountNo"`
+		InquiryRequestID string `json:"inquiryRequestId"`
+		TotalAmount      Amount `json:"totalAmount"`
+		InquiryStatus    string `json:"inquiryStatus"`
+		InquiryReason    struct {
+			English   string `json:"english"`
+			Indonesia string `json:"indonesia"`
+		} `json:"inquiryReason"`
+	} `json:"virtualAccountData"`
+	AdditionalInfo struct {
+		TrxID string `json:"trxId,omitempty"`
+	} `json:"additionalInfo,omitempty"`
+}
+
+// NewInquiryResponseSuccess builds a successful ("00") inquiry response
+// echoing the VA identity DOKU asked about, plus the amount we expect to be
+// paid. responseCode "2002500" follows DOKU's observed pattern (not a literal
+// confirmed example for this endpoint — verify against real sandbox).
+func NewInquiryResponseSuccess(req InquiryRequest, amount Amount, trxID string) InquiryResponse {
+	resp := InquiryResponse{ResponseCode: "2002500", ResponseMessage: "Successful"}
+	resp.VirtualAccountData.PartnerServiceID = req.PartnerServiceID
+	resp.VirtualAccountData.CustomerNo = req.CustomerNo
+	resp.VirtualAccountData.VirtualAccountNo = req.VirtualAccountNo
+	resp.VirtualAccountData.InquiryRequestID = req.InquiryRequestID
+	resp.VirtualAccountData.TotalAmount = amount
+	resp.VirtualAccountData.InquiryStatus = "00"
+	resp.VirtualAccountData.InquiryReason.English = "Success"
+	resp.VirtualAccountData.InquiryReason.Indonesia = "Sukses"
+	resp.AdditionalInfo.TrxID = trxID
+	return resp
+}
+
+// NewInquiryResponseNotFound builds a "not found" ("01") inquiry response —
+// DOKU-facing signal that the VA number doesn't correspond to any known bill.
+func NewInquiryResponseNotFound(req InquiryRequest) InquiryResponse {
+	resp := InquiryResponse{ResponseCode: "4042514", ResponseMessage: "Invalid Bill/Virtual Account Not Found"}
+	resp.VirtualAccountData.PartnerServiceID = req.PartnerServiceID
+	resp.VirtualAccountData.CustomerNo = req.CustomerNo
+	resp.VirtualAccountData.VirtualAccountNo = req.VirtualAccountNo
+	resp.VirtualAccountData.InquiryRequestID = req.InquiryRequestID
+	resp.VirtualAccountData.InquiryStatus = "01"
+	resp.VirtualAccountData.InquiryReason.English = "Bill not found"
+	resp.VirtualAccountData.InquiryReason.Indonesia = "Tagihan tidak ditemukan"
+	return resp
+}

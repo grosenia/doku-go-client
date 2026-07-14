@@ -49,6 +49,21 @@ func signAsymmetric(privateKey *rsa.PrivateKey, clientID, xTimestampUTC string) 
 	return base64.StdEncoding.EncodeToString(sig), nil
 }
 
+// verifyAsymmetric checks a base64 signature over `clientID + "|" + xTimestampUTC`
+// against the given RSA public key (SHA256withRSA / PKCS1v15) — the inverse of
+// signAsymmetric. Used to verify a request DOKU sends TO us (e.g. the Token
+// URL call for VA Direct Inquiry), where DOKU signs with its private key and
+// we verify with "DOKU Public Key" from the dashboard.
+func verifyAsymmetric(publicKey *rsa.PublicKey, clientID, xTimestampUTC, signatureB64 string) bool {
+	sig, err := base64.StdEncoding.DecodeString(signatureB64)
+	if err != nil {
+		return false
+	}
+	stringToSign := clientID + "|" + xTimestampUTC
+	hashed := sha256.Sum256([]byte(stringToSign))
+	return rsa.VerifyPKCS1v15(publicKey, crypto.SHA256, hashed[:], sig) == nil
+}
+
 // minifyJSON removes insignificant whitespace without reordering keys or
 // altering values (unlike round-tripping through a map), matching DOKU's
 // "minify the request body" step before hashing it.

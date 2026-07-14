@@ -39,6 +39,25 @@ via a `replace` directive during development (see root `core-api/go.mod`).
   Bill/Virtual Account`) nor the full generated number (`4033115 ... virtualAccountNo should be
   equal to partnerServiceId + customerNo`) succeeds. Flagged in `integration_test.go`, not solved.
 
+## VA Direct Inquiry (DIPC) — Token URL / Inquiry URL support
+
+Added 2026-07-14 for the merchant-hosted side of DIPC (see `core-api`'s
+`docs/DOKU_CHECKOUT_FLOW_DESIGN.md` §2.2 step 3 for the full design). Unlike everything else in this
+package (where we call DOKU), these calls go the other way — DOKU calls **us**:
+
+- `token_url.go`: `ParseRSAPublicKeyPEM` + `VerifyTokenURLRequestSignature` verify DOKU's inbound
+  "Get Token" request using the dashboard's "DOKU Public Key" (asymmetric, same formula as the B2B
+  Get Token endpoint's `signAsymmetric`, roles reversed). `TokenURLResponse`/`NewTokenURLResponse`
+  build the response body — confirmed by DOKU support to mirror the B2B Get Token API's own response
+  shape.
+- `inquiry.go`: `InquiryRequest`/`InquiryResponse` + `NewInquiryResponseSuccess`/
+  `NewInquiryResponseNotFound` for DOKU's inbound Direct Inquiry call. Signature verification reuses
+  the existing `VerifyWebhookSignature` (same symmetric HMAC scheme as the payment notification
+  webhook) — no new verify function needed for this half.
+- `auth.go`: added `verifyAsymmetric` — the missing inverse of `signAsymmetric`, needed because this
+  package only ever signed requests before (we were always the client); now it also verifies one
+  (DOKU calling us).
+
 ## Testing
 
 - `go test .` — unit + httptest mock-server scenario tests, no network.
