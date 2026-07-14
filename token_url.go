@@ -74,6 +74,11 @@ type TokenURLResponse struct {
 	AccessToken     string `json:"accessToken"`
 	TokenType       string `json:"tokenType"`
 	ExpiresIn       int    `json:"expiresIn"`
+	// AdditionalInfo is documented as optional, but DOKU's own literal example
+	// response (and their own B2B accessTokenResponse struct in client.go)
+	// always includes it (as ""), so we do too rather than omit it and risk a
+	// stricter-than-documented consumer on DOKU's side rejecting it.
+	AdditionalInfo string `json:"additionalInfo"`
 }
 
 // NewTokenURLResponse builds a successful Token URL response. responseCode
