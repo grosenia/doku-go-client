@@ -26,4 +26,10 @@ var BankChannels = map[string]string{
 	"bca":     "VIRTUAL_ACCOUNT_BCA",
 	"bni":     "VIRTUAL_ACCOUNT_BNI",
 	"mandiri": "VIRTUAL_ACCOUNT_BANK_MANDIRI",
+	// "VIRTUAL_ACCOUNT_BRI" follows the same pattern as BCA/BNI, but unlike
+	// those two this hasn't been confirmed against a real DOKU sandbox call
+	// or a literal docs example yet — Mandiri broke the naive
+	// "VIRTUAL_ACCOUNT_<BANK>" pattern ("BANK_MANDIRI" instead), so don't
+	// treat this as confirmed. Verify before enabling BRI VA in production.
+	"bri": "VIRTUAL_ACCOUNT_BRI",
 }
