@@ -36,7 +36,7 @@ type InquiryResponse struct {
 		InquiryRequestID      string `json:"inquiryRequestId"`
 		TotalAmount           Amount `json:"totalAmount"`
 		VirtualAccountTrxType string `json:"virtualAccountTrxType"`
-		ExpiredDate           string `json:"expiredDate"`
+		ExpiredDate           string `json:"expiredDate,omitempty"`
 		InquiryStatus         string `json:"inquiryStatus"`
 		InquiryReason         struct {
 			English   string `json:"english"`
@@ -53,12 +53,13 @@ type InquiryResponse struct {
 
 // NewInquiryResponseSuccess builds a successful ("00") inquiry response
 // echoing the VA identity DOKU asked about, plus the amount we expect to be
-// paid. responseCode "2002500" follows DOKU's observed pattern (not a literal
-// confirmed example for this endpoint — verify against real sandbox).
+// paid. responseCode "2002400" confirmed by DOKU support 2026-07-17 (format:
+// HTTP code + service code + case code; service code 24 = Inquiry, 25 =
+// Payment — "2002500" was wrong, that's Payment's code, not Inquiry's).
 // virtualAccountTrxType is always VATrxTypeClosed ("C") — every VA this
 // project creates is a fixed-bill (FIX_BILL) VA, never open/variable-amount.
 func NewInquiryResponseSuccess(req InquiryRequest, amount Amount, virtualAccountName, trxID string) InquiryResponse {
-	resp := InquiryResponse{ResponseCode: "2002500", ResponseMessage: "Successful"}
+	resp := InquiryResponse{ResponseCode: "2002400", ResponseMessage: "Successful"}
 	resp.VirtualAccountData.PartnerServiceID = req.PartnerServiceID
 	resp.VirtualAccountData.CustomerNo = req.CustomerNo
 	resp.VirtualAccountData.VirtualAccountNo = req.VirtualAccountNo
