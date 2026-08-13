@@ -82,13 +82,8 @@ func NewInquiryResponseSuccess(req InquiryRequest, amount Amount, virtualAccount
 
 // NewInquiryResponseNotFound builds a "not found" ("01") inquiry response —
 // DOKU-facing signal that the VA number doesn't correspond to any known bill.
-// responseCode "4042412": service code 24 = Inquiry, case code 12 = Not
-// Found — confirmed against ASPI Devsite's own sandbox response 2026-08-13.
-// Same class of mixup as NewInquiryResponseSuccess above ("4042514" is
-// Payment's (25) not-found code, not Inquiry's (24)) — this sibling function
-// was missed when that one got fixed.
 func NewInquiryResponseNotFound(req InquiryRequest) InquiryResponse {
-	resp := InquiryResponse{ResponseCode: "4042412", ResponseMessage: "Invalid Bill/Virtual Account Not Found"}
+	resp := InquiryResponse{ResponseCode: "4042514", ResponseMessage: "Invalid Bill/Virtual Account Not Found"}
 	resp.VirtualAccountData.PartnerServiceID = req.PartnerServiceID
 	resp.VirtualAccountData.CustomerNo = req.CustomerNo
 	resp.VirtualAccountData.VirtualAccountNo = req.VirtualAccountNo
