@@ -63,3 +63,37 @@ func NewPaymentNotificationAck(req PaymentNotificationRequest) PaymentNotificati
 	resp.AdditionalInfo.Channel = req.AdditionalInfo.Channel
 	return resp
 }
+
+// NewPaymentNotificationBillNotFound builds a "bill not found" response —
+// the notification's trxId/virtualAccountNo doesn't correspond to any known
+// order. responseCode "4042512": service code 25 = Payment, case code 12 =
+// Not Found — same convention as Inquiry's "4042412" (service code 24).
+func NewPaymentNotificationBillNotFound(req PaymentNotificationRequest) PaymentNotificationResponse {
+	resp := PaymentNotificationResponse{ResponseCode: "4042512", ResponseMessage: "Invalid Bill/Virtual Account Not Found"}
+	resp.VirtualAccountData.PartnerServiceID = req.PartnerServiceID
+	resp.VirtualAccountData.CustomerNo = req.CustomerNo
+	resp.VirtualAccountData.VirtualAccountNo = req.VirtualAccountNo
+	resp.VirtualAccountData.VirtualAccountName = req.VirtualAccountName
+	resp.VirtualAccountData.PaymentRequestID = req.PaymentRequestID
+	resp.VirtualAccountData.PaidAmount = req.PaidAmount
+	resp.VirtualAccountData.VirtualAccountTrxType = req.VirtualAccountTrxType
+	resp.AdditionalInfo.Channel = req.AdditionalInfo.Channel
+	return resp
+}
+
+// NewPaymentNotificationInvalidAmount builds an "invalid amount" response —
+// the order was found, but paidAmount doesn't match what's owed.
+// responseCode "4042513": service code 25 = Payment, case code 13 = Invalid
+// Amount.
+func NewPaymentNotificationInvalidAmount(req PaymentNotificationRequest) PaymentNotificationResponse {
+	resp := PaymentNotificationResponse{ResponseCode: "4042513", ResponseMessage: "Invalid Amount"}
+	resp.VirtualAccountData.PartnerServiceID = req.PartnerServiceID
+	resp.VirtualAccountData.CustomerNo = req.CustomerNo
+	resp.VirtualAccountData.VirtualAccountNo = req.VirtualAccountNo
+	resp.VirtualAccountData.VirtualAccountName = req.VirtualAccountName
+	resp.VirtualAccountData.PaymentRequestID = req.PaymentRequestID
+	resp.VirtualAccountData.PaidAmount = req.PaidAmount
+	resp.VirtualAccountData.VirtualAccountTrxType = req.VirtualAccountTrxType
+	resp.AdditionalInfo.Channel = req.AdditionalInfo.Channel
+	return resp
+}
