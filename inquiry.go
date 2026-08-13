@@ -82,8 +82,13 @@ func NewInquiryResponseSuccess(req InquiryRequest, amount Amount, virtualAccount
 
 // NewInquiryResponseNotFound builds a "not found" ("01") inquiry response —
 // DOKU-facing signal that the VA number doesn't correspond to any known bill.
+// responseCode "4042412": service code 24 = Inquiry, case code 12 = Not
+// Found — confirmed against ASPI Devsite's own sandbox response 2026-08-13.
+// Same class of mixup as NewInquiryResponseSuccess above ("4042514" is
+// Payment's (25) not-found code, not Inquiry's (24)) — this sibling function
+// was missed when that one got fixed.
 func NewInquiryResponseNotFound(req InquiryRequest) InquiryResponse {
-	resp := InquiryResponse{ResponseCode: "4042514", ResponseMessage: "Invalid Bill/Virtual Account Not Found"}
+	resp := InquiryResponse{ResponseCode: "4042412", ResponseMessage: "Invalid Bill/Virtual Account Not Found"}
 	resp.VirtualAccountData.PartnerServiceID = req.PartnerServiceID
 	resp.VirtualAccountData.CustomerNo = req.CustomerNo
 	resp.VirtualAccountData.VirtualAccountNo = req.VirtualAccountNo
@@ -91,6 +96,42 @@ func NewInquiryResponseNotFound(req InquiryRequest) InquiryResponse {
 	resp.VirtualAccountData.InquiryStatus = "01"
 	resp.VirtualAccountData.InquiryReason.English = "Bill not found"
 	resp.VirtualAccountData.InquiryReason.Indonesia = "Tagihan tidak ditemukan"
+	resp.VirtualAccountData.FreeText = []FreeText{}
+	resp.AdditionalInfo.Channel = req.AdditionalInfo.Channel
+	return resp
+}
+
+// NewInquiryResponseBillPaid builds a "bill has been paid" inquiry response —
+// the VA number is real, but its invoice is already PAID/SUCCEEDED, so it
+// can't be paid again. responseCode "4042414" confirmed against ASPI
+// Devsite's Tabel Jenis Pengujian (service code 24 = Inquiry).
+func NewInquiryResponseBillPaid(req InquiryRequest) InquiryResponse {
+	resp := InquiryResponse{ResponseCode: "4042414", ResponseMessage: "Bill has been paid"}
+	resp.VirtualAccountData.PartnerServiceID = req.PartnerServiceID
+	resp.VirtualAccountData.CustomerNo = req.CustomerNo
+	resp.VirtualAccountData.VirtualAccountNo = req.VirtualAccountNo
+	resp.VirtualAccountData.InquiryRequestID = req.InquiryRequestID
+	resp.VirtualAccountData.InquiryStatus = "01"
+	resp.VirtualAccountData.InquiryReason.English = "Bill has been paid"
+	resp.VirtualAccountData.InquiryReason.Indonesia = "Tagihan sudah dibayar"
+	resp.VirtualAccountData.FreeText = []FreeText{}
+	resp.AdditionalInfo.Channel = req.AdditionalInfo.Channel
+	return resp
+}
+
+// NewInquiryResponseBillExpired builds a "bill expired" inquiry response —
+// the VA number is real, but its invoice's expiry_date has passed.
+// responseCode "4042419" confirmed against ASPI Devsite's Tabel Jenis
+// Pengujian (service code 24 = Inquiry).
+func NewInquiryResponseBillExpired(req InquiryRequest) InquiryResponse {
+	resp := InquiryResponse{ResponseCode: "4042419", ResponseMessage: "Bill expired"}
+	resp.VirtualAccountData.PartnerServiceID = req.PartnerServiceID
+	resp.VirtualAccountData.CustomerNo = req.CustomerNo
+	resp.VirtualAccountData.VirtualAccountNo = req.VirtualAccountNo
+	resp.VirtualAccountData.InquiryRequestID = req.InquiryRequestID
+	resp.VirtualAccountData.InquiryStatus = "01"
+	resp.VirtualAccountData.InquiryReason.English = "Bill expired"
+	resp.VirtualAccountData.InquiryReason.Indonesia = "Tagihan kadaluarsa"
 	resp.VirtualAccountData.FreeText = []FreeText{}
 	resp.AdditionalInfo.Channel = req.AdditionalInfo.Channel
 	return resp
