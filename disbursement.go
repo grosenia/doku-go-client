@@ -38,9 +38,10 @@ func (g *Gateway) BalanceInquiry(req *BalanceInquiryRequest) (*BalanceInquiryRes
 	return resp, nil
 }
 
-// CheckDisbursementStatus polls a prior TransferBank call's status. The
-// endpoint path is UNCONFIRMED — see pathDisbursementCheckStatus in urls.go.
-// Do not rely on this in production until verified against DOKU sandbox.
+// CheckDisbursementStatus polls a prior TransferBank call's status —
+// confirmed against ASPI Devsite's sandbox 2026-08-14, see
+// pathDisbursementCheckStatus in urls.go. Still not directly confirmed
+// against DOKU's own production/sandbox host.
 func (g *Gateway) CheckDisbursementStatus(req *DisbursementCheckStatusRequest) (*DisbursementCheckStatusResponse, error) {
 	resp := &DisbursementCheckStatusResponse{}
 	_, err := g.doRequest(http.MethodPost, pathDisbursementCheckStatus, req, resp)

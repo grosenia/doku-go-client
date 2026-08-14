@@ -158,3 +158,63 @@ func TestScenario11_BalanceInquiry_Success(t *testing.T) {
 		t.Fatalf("AvaliableBalance.Value = %q, want 5000000.00", resp.AccountInfos.AvaliableBalance.Value)
 	}
 }
+
+// TestScenario12_CheckDisbursementStatus_Success uses the exact field shape
+// captured from a real response against ASPI Devsite's sandbox 2026-08-14
+// (see pathDisbursementCheckStatus in urls.go) — regression guard against
+// this endpoint's request/response shape drifting from what's confirmed
+// real, not just DOKU's buggy docs.
+func TestScenario12_CheckDisbursementStatus_Success(t *testing.T) {
+	var gotReq DisbursementCheckStatusRequest
+	gw, _ := mockGateway(t, pathDisbursementCheckStatus,
+		mockTokenHandler("mock-token", 900),
+		func(w http.ResponseWriter, r *http.Request) {
+			body, _ := io.ReadAll(r.Body)
+			if err := json.Unmarshal(body, &gotReq); err != nil {
+				t.Fatalf("unmarshal request: %v", err)
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			_ = json.NewEncoder(w).Encode(DisbursementCheckStatusResponse{
+				ErrorResponse:              ErrorResponse{ResponseCode: "2003600", ResponseMessage: "Successful"},
+				OriginalReferenceNo:        gotReq.OriginalReferenceNo,
+				OriginalPartnerReferenceNo: gotReq.OriginalPartnerReferenceNo,
+				OriginalExternalID:         gotReq.OriginalExternalID,
+				ServiceCode:                gotReq.ServiceCode,
+				TransactionDate:            "2026-08-14T11:19:36+07:00",
+				Amount:                     Amount{Value: "100000", Currency: "IDR"},
+				BeneficiaryAccountNo:       "888801000157508",
+				BeneficiaryBankCode:        "8888",
+				SourceAccountNo:            "888801000157508",
+				PreviousResponseCode:       "2005300",
+				ReferenceNumber:            gotReq.OriginalReferenceNo,
+				TransactionID:              "5620574226073548",
+				LatestTransactionStatus:    DisbursementStatusSuccess,
+				TransactionStatusDesc:      "success",
+			})
+		},
+	)
+
+	resp, err := gw.CheckDisbursementStatus(&DisbursementCheckStatusRequest{
+		OriginalPartnerReferenceNo: "PAYOUT-001",
+		OriginalReferenceNo:        "DOKU-REF-001",
+		ServiceCode:                DisbursementCheckStatusServiceCode,
+		TransactionDate:            "2026-08-14T11:15:54+07:00",
+		Amount:                     Amount{Value: "100000", Currency: "IDR"},
+	})
+	if err != nil {
+		t.Fatalf("CheckDisbursementStatus error: %v", err)
+	}
+	if resp.ErrorStatus {
+		t.Fatalf("unexpected ErrorStatus, response: %+v", resp)
+	}
+	if resp.LatestTransactionStatus != DisbursementStatusSuccess {
+		t.Fatalf("LatestTransactionStatus = %q, want %q", resp.LatestTransactionStatus, DisbursementStatusSuccess)
+	}
+	if resp.TransactionStatusDesc != "success" {
+		t.Fatalf("TransactionStatusDesc = %q, want success", resp.TransactionStatusDesc)
+	}
+	if gotReq.ServiceCode != DisbursementCheckStatusServiceCode {
+		t.Fatalf("ServiceCode not sent correctly on the wire, got %q", gotReq.ServiceCode)
+	}
+}
