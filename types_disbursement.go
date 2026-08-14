@@ -114,15 +114,29 @@ type BalanceInquiryResponse struct {
 	ErrorResponse
 }
 
+// DisbursementCheckStatusServiceCode is the fixed serviceCode value for
+// polling a Transfer to Bank (KirimDOKU disbursement) transaction —
+// "Transfer Status Inquiry (Disbursement)" per ASPI's Tabel Jenis
+// Pengujian Devsite. This is a generic status-check endpoint shared across
+// several transfer types; other serviceCode values poll other kinds of
+// transactions (not implemented here — this package only ever originates
+// TransferBank calls).
+const DisbursementCheckStatusServiceCode = "53"
+
 // DisbursementCheckStatusRequest polls the status of a prior TransferBank
-// call. Path is UNCONFIRMED — see pathDisbursementCheckStatus in urls.go.
+// call — confirmed against ASPI Devsite's sandbox 2026-08-14, see
+// pathDisbursementCheckStatus in urls.go.
 type DisbursementCheckStatusRequest struct {
-	OriginalPartnerReferenceNo string `json:"originalPartnerReferenceNo"` // max 64, from TransferBankRequest.PartnerReferenceNo
-	OriginalReferenceNo        string `json:"originalReferenceNo,omitempty"`
+	OriginalPartnerReferenceNo string `json:"originalPartnerReferenceNo"` // from TransferBankRequest.PartnerReferenceNo
+	OriginalReferenceNo        string `json:"originalReferenceNo"`        // from TransferBankResponse.ReferenceNo
 	OriginalExternalID         string `json:"originalExternalId,omitempty"`
-	ServiceCode                string `json:"serviceCode"` // max 2
-	BeneficiaryAccountNumber   string `json:"beneficiaryAccountNumber"`
-	BeneficiaryBankCode        string `json:"beneficiaryBankCode"`
+	ServiceCode                string `json:"serviceCode"` // use DisbursementCheckStatusServiceCode
+	TransactionDate            string `json:"transactionDate"`
+	Amount                     Amount `json:"amount"`
+	AdditionalInfo             struct {
+		DeviceID string `json:"deviceId,omitempty"`
+		Channel  string `json:"channel,omitempty"`
+	} `json:"additionalInfo,omitempty"`
 }
 
 // Disbursement transaction status codes (latestTransactionStatus).
@@ -134,17 +148,30 @@ const (
 )
 
 type DisbursementCheckStatusResponseAdditionalInfo struct {
-	CashInTime        string `json:"cashInTime,omitempty"`
-	Remark            string `json:"remark,omitempty"`
-	BeneficiaryAmount Amount `json:"beneficiaryAmount,omitempty"`
+	DeviceID string `json:"deviceId,omitempty"`
+	Channel  string `json:"channel,omitempty"`
 }
 
+// DisbursementCheckStatusResponse — field set confirmed against a real
+// response from ASPI Devsite's sandbox 2026-08-14 (see
+// pathDisbursementCheckStatus in urls.go for the full request/response
+// captured). ErrorResponse is embedded for responseCode/responseMessage,
+// same convention as every other response type in this package.
 type DisbursementCheckStatusResponse struct {
-	OriginalReferenceNo     string                                        `json:"originalReferenceNo"`
-	LatestTransactionStatus string                                        `json:"latestTransactionStatus"` // one of DisbursementStatus*
-	Amount                  Amount                                        `json:"amount"`
-	TransactionDate         string                                        `json:"transactionDate"`
-	SessionID               string                                        `json:"sessionId,omitempty"`
-	AdditionalInfo          DisbursementCheckStatusResponseAdditionalInfo `json:"additionalInfo,omitempty"`
+	OriginalReferenceNo        string                                        `json:"originalReferenceNo"`
+	OriginalPartnerReferenceNo string                                        `json:"originalPartnerReferenceNo"`
+	OriginalExternalID         string                                        `json:"originalExternalId,omitempty"`
+	ServiceCode                string                                        `json:"serviceCode"`
+	TransactionDate            string                                        `json:"transactionDate"`
+	Amount                     Amount                                        `json:"amount"`
+	BeneficiaryAccountNo       string                                        `json:"beneficiaryAccountNo,omitempty"`
+	BeneficiaryBankCode        string                                        `json:"beneficiaryBankCode,omitempty"`
+	SourceAccountNo            string                                        `json:"sourceAccountNo,omitempty"`
+	PreviousResponseCode       string                                        `json:"previousResponseCode,omitempty"`
+	ReferenceNumber            string                                        `json:"referenceNumber,omitempty"`
+	TransactionID              string                                        `json:"transactionId,omitempty"`
+	LatestTransactionStatus    string                                        `json:"latestTransactionStatus"` // one of DisbursementStatus*
+	TransactionStatusDesc      string                                        `json:"transactionStatusDesc,omitempty"`
+	AdditionalInfo             DisbursementCheckStatusResponseAdditionalInfo `json:"additionalInfo,omitempty"`
 	ErrorResponse
 }

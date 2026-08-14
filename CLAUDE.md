@@ -78,12 +78,21 @@ Flow: **Account Inquiry** (validate the destination account, get a `sessionId`) 
 Inquiry** (check Grosenia's own DOKU balance, optional/informational) → **Transfer Bank** (moves
 the money, `sessionId` from Account Inquiry required) → **Check Status** (poll for completion).
 
-`CheckDisbursementStatus`'s endpoint path is a **guess**, not confirmed — DOKU's own docs page for
-it has a genuine documentation bug (titled "KIRIMDOKU Check Status" but the embedded OpenAPI spec
-is actually the QR `qr-mpm-status` endpoint). Don't trust it in production without confirming with
-DOKU directly. See `docs/FEATURES.md`/`docs/CHECKLIST.md` for the full list of disbursement gaps
-(including the two webhook types that aren't implemented at all — their schemas aren't extractable
-from DOKU's public docs).
+`CheckDisbursementStatus`'s endpoint path (`/snap/v1.1/transfer/status`, no "emoney" segment —
+different from the naming convention of the other 3 disbursement endpoints above) and full
+request/response shape were confirmed 2026-08-14 against ASPI Devsite's sandbox (ASPI's own portal
+has the exact same documentation bug DOKU's does — its "Transfer Status Inquiry" menu item also
+serves the QR `qr-mpm-status` spec instead; the real endpoint was found on a *different* menu item,
+"Transaction Status Inquiry Bank" under Transfer Kredit → PJP AIS Bank, which turns out to be a
+generic status-check keyed by `serviceCode` — `"53"` = disbursement, see
+`DisbursementCheckStatusServiceCode`). Real response captured:
+`2003600 Successful`/`latestTransactionStatus: "00"`/`transactionStatusDesc: "success"` for a
+genuine prior `TransferBank` call. Still not confirmed against DOKU's own production/sandbox host
+directly, only against ASPI's simulator — the `/snap/v1.1/...` path is inferred from ASPI's
+`/api/v1.0/...` equivalent via the same host-prefix substitution already confirmed for every other
+disbursement endpoint, not independently verified. See `docs/FEATURES.md`/`docs/CHECKLIST.md` for
+the full list of remaining disbursement gaps (including the two webhook types that aren't
+implemented at all — their schemas aren't extractable from DOKU's public docs).
 
 ## Adding a new bank
 
