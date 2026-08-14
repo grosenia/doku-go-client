@@ -147,9 +147,19 @@ const (
 	DisbursementStatusFailed   = "06"
 )
 
+// DisbursementCheckStatusResponseAdditionalInfo: DeviceID/Channel confirmed
+// against a real SUCCESS response from ASPI Devsite's sandbox 2026-08-14.
+// CashInTime/Remark/BeneficiaryAmount are pre-existing unconfirmed guesses
+// for FAILED/REFUNDED responses (not exercised by that capture, which was a
+// SUCCESS case) — kept since api-web's CheckDisbursementStatusDoku already
+// reads AdditionalInfo.Remark for those two statuses; still verify before
+// trusting them.
 type DisbursementCheckStatusResponseAdditionalInfo struct {
-	DeviceID string `json:"deviceId,omitempty"`
-	Channel  string `json:"channel,omitempty"`
+	DeviceID          string `json:"deviceId,omitempty"`
+	Channel           string `json:"channel,omitempty"`
+	CashInTime        string `json:"cashInTime,omitempty"`
+	Remark            string `json:"remark,omitempty"`
+	BeneficiaryAmount Amount `json:"beneficiaryAmount,omitempty"`
 }
 
 // DisbursementCheckStatusResponse — field set confirmed against a real
