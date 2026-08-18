@@ -142,3 +142,35 @@ func TestNewKirimDokuLegacyRefundNotificationAck(t *testing.T) {
 		t.Errorf("ack response = %+v", resp)
 	}
 }
+
+// TestKirimDokuLegacyCheckBalance_BodyAuth uses the exact response shape
+// captured from a real staging call 2026-08-14 — balance fields are numeric
+// on the wire, not strings, which this test guards against regressing.
+func TestKirimDokuLegacyCheckBalance_BodyAuth(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/checkbalance" {
+			t.Errorf("unexpected path %q", r.URL.Path)
+		}
+		var captured authFields
+		if err := json.NewDecoder(r.Body).Decode(&captured); err != nil {
+			t.Fatalf("decode body: %v", err)
+		}
+		plaintext := decryptTestSignature(t, captured.Signature, testKirimDokuLegacyEncryptionKey)
+		if plaintext != captured.AgentKey+captured.RequestID {
+			t.Errorf("signature mismatch: got plaintext %q", plaintext)
+		}
+		_, _ = w.Write([]byte(`{"status":0,"message":"Check balance success","balance":{"corporateName":"Grosenia","creditLimit":0.000000,"creditAlertLimit":0.000000,"creditLastBalance":1000000000000.000000}}`))
+	}))
+	defer srv.Close()
+
+	c := NewKirimDokuLegacyClient("A47438", testKirimDokuLegacyEncryptionKey, true)
+	c.BaseURL = srv.URL
+
+	resp, err := c.CheckBalance()
+	if err != nil {
+		t.Fatalf("CheckBalance: %v", err)
+	}
+	if resp.Balance.CorporateName != "Grosenia" || resp.Balance.CreditLastBalance != 1_000_000_000_000 {
+		t.Errorf("CheckBalance response = %+v", resp.Balance)
+	}
+}

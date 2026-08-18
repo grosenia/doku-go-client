@@ -47,11 +47,15 @@ type KirimDokuLegacyPingResponse struct {
 	Message string `json:"message"`
 }
 
+// KirimDokuLegacyBalance — CreditLimit/CreditAlertLimit/CreditLastBalance are
+// numeric on the wire (e.g. 1000000000000.000000), confirmed against a real
+// staging response 2026-08-14 — the docs don't state this, don't assume
+// string like other DOKU amount fields elsewhere in this package.
 type KirimDokuLegacyBalance struct {
-	CorporateName     string `json:"corporateName"`
-	CreditLimit       string `json:"creditLimit"`
-	CreditAlertLimit  string `json:"creditAlertLimit"`
-	CreditLastBalance string `json:"creditLastBalance"`
+	CorporateName     string  `json:"corporateName"`
+	CreditLimit       float64 `json:"creditLimit"`
+	CreditAlertLimit  float64 `json:"creditAlertLimit"`
+	CreditLastBalance float64 `json:"creditLastBalance"`
 }
 
 type KirimDokuLegacyCheckBalanceResponse struct {
