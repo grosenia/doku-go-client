@@ -9,3 +9,9 @@ DOKU_CUSTOMER_NUMBER=0812345678
 # rest of the payment code itself. Per-bank prefix (from DOKU dashboard "BIN Rules"):
 # BCA=9, BNI=3, Mandiri=0. Do NOT invent a longer customerNo yourself.
 DOKU_CUSTOMER_NO_PREFIX=9
+
+# KIRIMDOKU legacy (non-SNAP) API — separate credentials, separate system.
+# See docs/KIRIMDOKU_LEGACY_API_REFERENCE.md.
+KIRIMDOKU_LEGACY_AGENT_KEY=A00000
+KIRIMDOKU_LEGACY_ENCRYPTION_KEY=0123456789abcdef
+KIRIMDOKU_LEGACY_SANDBOX=true

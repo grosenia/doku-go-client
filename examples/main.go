@@ -48,6 +48,11 @@ func mustGateway(props map[string]string) *dokugo.Gateway {
 	return dokugo.NewGateway(&client)
 }
 
+func mustKirimDokuLegacyClient(props map[string]string) *dokugo.KirimDokuLegacyClient {
+	sandbox := props["KIRIMDOKU_LEGACY_SANDBOX"] != "false"
+	return dokugo.NewKirimDokuLegacyClient(props["KIRIMDOKU_LEGACY_AGENT_KEY"], props["KIRIMDOKU_LEGACY_ENCRYPTION_KEY"], sandbox)
+}
+
 func arg(i int, fallback string) string {
 	if i < len(os.Args) {
 		return os.Args[i]
@@ -63,6 +68,12 @@ func main() {
 		fmt.Println("  account-inquiry <beneficiaryAccountNumber> <beneficiaryBankCode> [amount]")
 		fmt.Println("  transfer-bank <beneficiaryAccountNumber> <beneficiaryBankCode> <sessionId> [amount]")
 		fmt.Println("  balance-inquiry <accountNo>")
+		fmt.Println("kirimdoku legacy (non-SNAP) commands:")
+		fmt.Println("  kirimdoku-ping")
+		fmt.Println("  kirimdoku-check-balance")
+		fmt.Println("  kirimdoku-inquiry <beneficiaryAccountNumber> <bankID> [amount]")
+		fmt.Println("  kirimdoku-remit <inquiryIdToken> <beneficiaryAccountNumber> <bankID> <beneficiaryName>")
+		fmt.Println("  kirimdoku-transaction-info <transactionId>")
 		os.Exit(1)
 	}
 	command := os.Args[1]
@@ -239,6 +250,113 @@ func main() {
 			return
 		}
 		logOK(fmt.Sprintf("name=%s avaliableBalance=%s %s", resp.Name, resp.AccountInfos.AvaliableBalance.Value, resp.AccountInfos.AvaliableBalance.Currency))
+
+	case "kirimdoku-ping":
+		logBanner("KIRIMDOKU Legacy Ping")
+		kc := mustKirimDokuLegacyClient(props)
+		resp, err := kc.Ping()
+		if err != nil {
+			logFail(err.Error())
+			return
+		}
+		if resp.Status != 0 {
+			logFail(fmt.Sprintf("status=%d message=%s", resp.Status, resp.Message))
+			return
+		}
+		logOK(resp.Message)
+
+	case "kirimdoku-check-balance":
+		logBanner("KIRIMDOKU Legacy Check Balance")
+		kc := mustKirimDokuLegacyClient(props)
+		resp, err := kc.CheckBalance()
+		if err != nil {
+			logFail(err.Error())
+			return
+		}
+		if resp.Status != 0 {
+			logFail(fmt.Sprintf("status=%d message=%s", resp.Status, resp.Message))
+			return
+		}
+		logOK(fmt.Sprintf("corporateName=%s creditLastBalance=%.2f", resp.Balance.CorporateName, resp.Balance.CreditLastBalance))
+
+	case "kirimdoku-inquiry":
+		logBanner("KIRIMDOKU Legacy Cash-In Inquiry")
+		beneficiaryAccountNumber := arg(2, "")
+		bankID := arg(3, "")
+		amount := arg(4, "50000")
+		kc := mustKirimDokuLegacyClient(props)
+		resp, err := kc.CashInInquiry(&dokugo.KirimDokuLegacyInquiryRequest{
+			Channel:             dokugo.KirimDokuLegacyChannel{Code: dokugo.KirimDokuLegacyChannelBank},
+			SenderCountry:       dokugo.KirimDokuLegacyCountry{Code: "ID"},
+			SenderCurrency:      dokugo.KirimDokuLegacyCurrency{Code: "IDR"},
+			SenderAmount:        amount,
+			BeneficiaryCountry:  dokugo.KirimDokuLegacyCountry{Code: "ID"},
+			BeneficiaryCurrency: dokugo.KirimDokuLegacyCurrency{Code: "IDR"},
+			BeneficiaryAccount: &dokugo.KirimDokuLegacyBeneficiaryAccount{
+				Number: beneficiaryAccountNumber,
+				Bank:   dokugo.KirimDokuLegacyBank{ID: bankID},
+			},
+		})
+		if err != nil {
+			logFail(err.Error())
+			return
+		}
+		if resp.Status != 0 {
+			logFail(fmt.Sprintf("status=%d message=%s", resp.Status, resp.Message))
+			return
+		}
+		logOK(fmt.Sprintf("idToken=%s beneficiaryName=%s fee=%.2f %s", resp.Inquiry.IDToken, resp.Inquiry.BeneficiaryAccount.Name, resp.Inquiry.Fund.Fees.Total, resp.Inquiry.Fund.Fees.Currency))
+
+	case "kirimdoku-remit":
+		logBanner("KIRIMDOKU Legacy Cash-In Remit")
+		inquiryIDToken := arg(2, "")
+		beneficiaryAccountNumber := arg(3, "")
+		bankID := arg(4, "")
+		beneficiaryName := arg(5, "Example Beneficiary")
+		kc := mustKirimDokuLegacyClient(props)
+		resp, err := kc.CashInRemit(&dokugo.KirimDokuLegacyRemitRequest{
+			Channel:        dokugo.KirimDokuLegacyChannel{Code: dokugo.KirimDokuLegacyChannelBank},
+			InquiryIDToken: inquiryIDToken,
+			SendTrxID:      fmt.Sprintf("SEND-%d", time.Now().Unix()),
+			Sender: dokugo.KirimDokuLegacySender{
+				Name: "Grosenia Niaga",
+				KirimDokuLegacyPersonalID: dokugo.KirimDokuLegacyPersonalID{
+					Type:    "KTP",
+					ID:      "1234567890123456",
+					Country: "ID",
+				},
+			},
+			Beneficiary: dokugo.KirimDokuLegacyBeneficiary{Name: beneficiaryName, Country: "ID"},
+			BeneficiaryAccount: &dokugo.KirimDokuLegacyBeneficiaryAccount{
+				Number: beneficiaryAccountNumber,
+				Name:   beneficiaryName,
+				Bank:   dokugo.KirimDokuLegacyBank{ID: bankID},
+			},
+		})
+		if err != nil {
+			logFail(err.Error())
+			return
+		}
+		if resp.Status != 0 {
+			logFail(fmt.Sprintf("status=%d message=%s warning=%s errors=%v", resp.Status, resp.Message, resp.Warning, resp.Errors))
+			return
+		}
+		logOK(fmt.Sprintf("transactionId=%s transactionStatus=%s responseCode=%s", resp.Remit.TransactionID, resp.Remit.TransactionStatus, resp.Remit.PaymentData.ResponseCode))
+
+	case "kirimdoku-transaction-info":
+		logBanner("KIRIMDOKU Legacy Transaction Info")
+		transactionID := arg(2, "")
+		kc := mustKirimDokuLegacyClient(props)
+		resp, err := kc.TransactionInfo(transactionID)
+		if err != nil {
+			logFail(err.Error())
+			return
+		}
+		if resp.Status != 0 {
+			logFail(fmt.Sprintf("status=%d message=%s", resp.Status, resp.Message))
+			return
+		}
+		logOK(fmt.Sprintf("id=%s status=%s statusMessage=%s", resp.Transaction.ID, resp.Transaction.Status, resp.Transaction.TransactionLog.StatusMessage))
 
 	default:
 		fmt.Println("unknown command:", command)

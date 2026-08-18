@@ -94,6 +94,48 @@ disbursement endpoint, not independently verified. See `docs/FEATURES.md`/`docs/
 the full list of remaining disbursement gaps (including the two webhook types that aren't
 implemented at all — their schemas aren't extractable from DOKU's public docs).
 
+## KIRIMDOKU legacy (non-SNAP) API — separate system, separate client
+
+Added 2026-08-14 after DOKU support activated a live legacy sandbox merchant and pointed at it
+directly (no mention of SNAP/ASPI) — see `docs/KIRIMDOKU_LEGACY_API_REFERENCE.md` for the full
+captured docs. This is a **completely different API** from everything else in this package: base
+path `/apikirimdoku` (staging: `staging.doku.com`, prod: `kirimdoku.com/v2/api`) instead of
+`/snap/v1.1/...`, and auth via a fixed `agentKey` + AES-128/ECB/PKCS7 `signature` instead of SNAP's
+Bearer-token + HMAC/RSA scheme — so it gets its own client type, `KirimDokuLegacyClient`
+(`kirimdoku_legacy.go`/`types_kirimdoku_legacy.go`), not `Client`/`Gateway`. Do not merge the two.
+
+- Auth field placement is inconsistent per-endpoint (confirmed by testing both against real DOKU
+  staging): `Ping`/`CheckBalance` put `agentKey`/`requestId`/`signature` in the **JSON body**
+  (`doRequestBodyAuth`); `CashInInquiry`/`CashInRemit`/`TransactionInfo` put them as **HTTP
+  headers** (`doRequestHeaderAuth`) — `TransactionInfo`'s header placement specifically is inferred
+  from the same pattern, not independently confirmed.
+  - **Confirmed live 2026-08-14** against real staging (`agentKey A47438` /
+    `encryptionKey pl6jn16fvkb64fit`): `Ping` → `{"status":0,"message":"Ok"}`; `CashInInquiry`
+    (channel `07` Bank, BCA account) → real resolved account holder name, proving genuine sandbox
+    connectivity (not a canned response).
+  - **`CashInInquiry`'s response is significantly richer than the docs summarize** — `fund` and
+    `beneficiaryAccount` nest INSIDE `inquiry` (not top-level as the docs' prose implies), `fund.fees`
+    is a nested object (`total`/`currency`/`components`/`additionalFee`/`fixedFee`), and
+    `beneficiaryAccount` includes DOKU's own resolved bank master data. `CheckBalance`'s numeric
+    fields (`creditLimit` etc.) are JSON numbers, not strings. Both confirmed 2026-08-14.
+  - **`CashInRemit` blocked, unresolved 2026-08-14**: real staging consistently rejects with
+    `status: 11` (`errors: {"beneficiary.country": ["Invalid value"], "sender.personalIdCountry":
+    ["Invalid value"]}`) — tried `"ID"`, `"IDN"`, `"360"` (ISO numeric), `"Indonesia"`, and an
+    object form `{"code": "ID"}` (which broke differently: `"": ["Invalid parameter null"]`), none
+    accepted. Also needed (undocumented) top-level `senderCountry`/`senderCurrency`/
+    `beneficiaryCountry`/`beneficiaryCurrency` on the remit request, same as inquiry, before those
+    two fields became the only remaining errors — so the request shape is otherwise right. Ask DOKU
+    support for the accepted value/format before spending more sandbox calls guessing (same lesson
+    as the DGPC `customerNo` incident above — don't guess a provisioning/format field blind).
+    `TransactionInfo` is unexercised entirely (no successful remit yet to look up).
+- Go's stdlib intentionally has no ECB cipher mode (it's normally insecure) — `sign()` in
+  `kirimdoku_legacy.go` implements AES-ECB-PKCS7 manually, block by block, to match DOKU's Java
+  sample (`Cipher.getInstance("AES")`'s bare default is ECB/PKCS5, equivalent to PKCS7 at 16-byte
+  blocks).
+- Not yet wired into `core-api`/`api-web` — this is standalone client code, pending DOKU's answer on
+  whether production KirimDOKU should use this legacy path or the SNAP path built elsewhere in this
+  package (question sent to DOKU support 2026-08-14, unanswered as of this writing).
+
 ## Adding a new bank
 
 Add an entry to `BankChannels` in `constants.go` — no other code changes needed for VA creation.
