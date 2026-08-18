@@ -87,12 +87,38 @@ serves the QR `qr-mpm-status` spec instead; the real endpoint was found on a *di
 generic status-check keyed by `serviceCode` — `"53"` = disbursement, see
 `DisbursementCheckStatusServiceCode`). Real response captured:
 `2003600 Successful`/`latestTransactionStatus: "00"`/`transactionStatusDesc: "success"` for a
-genuine prior `TransferBank` call. Still not confirmed against DOKU's own production/sandbox host
-directly, only against ASPI's simulator — the `/snap/v1.1/...` path is inferred from ASPI's
-`/api/v1.0/...` equivalent via the same host-prefix substitution already confirmed for every other
-disbursement endpoint, not independently verified. See `docs/FEATURES.md`/`docs/CHECKLIST.md` for
-the full list of remaining disbursement gaps (including the two webhook types that aren't
-implemented at all — their schemas aren't extractable from DOKU's public docs).
+genuine prior `TransferBank` call.
+
+**Update 2026-08-18 — `pathDisbursementCheckStatus` confirmed WRONG against real DOKU.** Tested
+directly against `api-sandbox.doku.com` (not ASPI) using a real successful `TransferBank`
+transaction: `/snap/v1.1/transfer/status` returns `404 No static resource`. Also tried
+`/orders/v1.0/transfer/status`, `/snap/v1.1/emoney/transfer-status`, `/snap/v1.1/transfer-status`,
+`/snap/v1.1/emoney/transfer/status`, `/orders/v1.0/emoney/transfer-status` — all 404. The
+`api/v1.0` ↔ `snap/v1.1` host-substitution pattern that correctly predicted every other
+disbursement endpoint's real path does NOT hold for this one. The real path is unknown — do not
+guess further, ask DOKU directly. `AccountInquiry`/`TransferBank`/`BalanceInquiry`'s paths are
+unaffected (see below, `AccountInquiry`/`TransferBank` independently confirmed the same day).
+
+**Also confirmed 2026-08-18, first direct (non-ASPI) test of the other 3 disbursement endpoints**
+against `api-sandbox.doku.com`:
+- `AccountInquiry`: works, but real DOKU requires `additionalInfo.senderCountryCode` and
+  `additionalInfo.beneficiaryAccountName` — both tagged `omitempty` in this package (matching the
+  docs, which call them optional) but rejected as `4004202 Invalid Mandatory Field` if empty on
+  real DOKU (ASPI's simulator let them through blank). Always set both.
+- `TransferBank`: works — a real transfer executed successfully
+  (`2004300 Successful`/`referenceNo DK02195017`). Found and fixed a real bug in the process:
+  `TransferBankResponseAdditionalInfo.Amount` was typed as the nested `Amount{Value,Currency}`
+  struct like every other amount field in this package, but DOKU actually returns it as a **plain
+  decimal string** (`"50000.00"`) — this broke `json.Unmarshal`, which made a successful transfer
+  look like a failed request (confirmed via `4094302 Transaction Has Been Processed` on retrying
+  the same `sessionId`). Now typed as `string`.
+- `BalanceInquiry`: fails with `4041108 Invalid Merchant` when tried with a placeholder
+  `accountNo` — Grosenia's real KirimDOKU balance account number is unknown, not guessable (same
+  category of mistake as the DGPC `customerNo` incident above), needs asking DOKU.
+
+See `docs/FEATURES.md`/`docs/CHECKLIST.md` for the full list of remaining disbursement gaps
+(including the two webhook types that aren't implemented at all — their schemas aren't extractable
+from DOKU's public docs).
 
 ## KIRIMDOKU legacy (non-SNAP) API — separate system, separate client
 

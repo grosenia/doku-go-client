@@ -189,7 +189,7 @@ func main() {
 			CustomerNumber:           props["DOKU_CUSTOMER_NUMBER"],
 			BeneficiaryAccountNumber: beneficiaryAccountNumber,
 			Amount:                   dokugo.Amount{Value: amount, Currency: "IDR"},
-			AdditionalInfo:           dokugo.AccountInquiryAdditionalInfo{BeneficiaryBankCode: beneficiaryBankCode},
+			AdditionalInfo:           dokugo.AccountInquiryAdditionalInfo{BeneficiaryBankCode: beneficiaryBankCode, SenderCountryCode: "ID", BeneficiaryAccountName: arg(5, "Example Customer")},
 		})
 		if err != nil {
 			logFail(err.Error())

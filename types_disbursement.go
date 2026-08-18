@@ -6,11 +6,15 @@ package dokugo
 
 // AccountInquiryAdditionalInfo carries the destination bank's channel/code —
 // required so DOKU knows which bank rail to validate the account against.
+// BeneficiaryAccountName and SenderCountryCode are tagged omitempty (ASPI's
+// Devsite simulator accepted them blank) but real DOKU sandbox rejects both
+// as "Invalid Mandatory Field" if empty — confirmed 2026-08-18 against
+// api-sandbox.doku.com directly. Always set both in practice.
 type AccountInquiryAdditionalInfo struct {
 	ChannelCode            string `json:"channelCode,omitempty"`
 	BeneficiaryBankCode    string `json:"beneficiaryBankCode"`
-	BeneficiaryAccountName string `json:"beneficiaryAccountName,omitempty"`
-	SenderCountryCode      string `json:"senderCountryCode,omitempty"`
+	BeneficiaryAccountName string `json:"beneficiaryAccountName,omitempty"` // required by real DOKU despite the tag
+	SenderCountryCode      string `json:"senderCountryCode,omitempty"`      // required by real DOKU despite the tag, e.g. "ID"
 }
 
 // AccountInquiryRequest validates a destination bank account and its holder
@@ -75,9 +79,13 @@ type TransferBankRequest struct {
 	AdditionalInfo           TransferBankAdditionalInfo `json:"additionalInfo"`
 }
 
+// TransferBankResponseAdditionalInfo.Amount is a plain decimal string
+// (e.g. "50000.00"), NOT a nested Amount{Value,Currency} object like every
+// other amount field in this package — confirmed against a real successful
+// TransferBank response from api-sandbox.doku.com directly, 2026-08-18.
 type TransferBankResponseAdditionalInfo struct {
 	SessionID string `json:"sessionId,omitempty"`
-	Amount    Amount `json:"amount,omitempty"`
+	Amount    string `json:"amount,omitempty"`
 }
 
 type TransferBankResponse struct {
