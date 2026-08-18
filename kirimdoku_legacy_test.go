@@ -105,10 +105,9 @@ func TestKirimDokuLegacyCashInInquiry_HeaderAuth(t *testing.T) {
 			t.Errorf("beneficiaryAccount not round-tripped correctly: %+v", body.BeneficiaryAccount)
 		}
 
-		_ = json.NewEncoder(w).Encode(KirimDokuLegacyInquiryResponse{
-			Status:  0,
-			Inquiry: KirimDokuLegacyInquiryData{IDToken: "I0828364575432248"},
-		})
+		// Exact shape captured from a real staging response 2026-08-14 —
+		// fund/beneficiaryAccount nest under "inquiry", not top-level.
+		_, _ = w.Write([]byte(`{"status":0,"message":"Transfer Inquiry Approve","inquiry":{"idToken":"I0828364575432248","fund":{"origin":{"amount":50000.0,"currency":"IDR"},"fees":{"total":4500.0,"currency":"IDR","components":[{"description":"Default Fee","amount":4500.0}],"additionalFee":0.0,"fixedFee":0.0},"destination":{"amount":50000.0,"currency":"IDR"}},"beneficiaryAccount":{"number":"0803944123","name":"FHILEA HERMANUS","bank":{"id":"014","code":"CENAIDJA","name":"Bank Central Asia BCA","city":"Jakarta","countryCode":"ID"}}}}`))
 	}))
 	defer srv.Close()
 
@@ -132,6 +131,12 @@ func TestKirimDokuLegacyCashInInquiry_HeaderAuth(t *testing.T) {
 	}
 	if resp.Inquiry.IDToken != "I0828364575432248" {
 		t.Errorf("idToken = %q, want I0828364575432248", resp.Inquiry.IDToken)
+	}
+	if resp.Inquiry.Fund.Fees.Total != 4500 {
+		t.Errorf("fund.fees.total = %v, want 4500", resp.Inquiry.Fund.Fees.Total)
+	}
+	if resp.Inquiry.BeneficiaryAccount.Name != "FHILEA HERMANUS" {
+		t.Errorf("beneficiaryAccount.name = %q, want FHILEA HERMANUS", resp.Inquiry.BeneficiaryAccount.Name)
 	}
 }
 

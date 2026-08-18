@@ -113,8 +113,21 @@ Bearer-token + HMAC/RSA scheme — so it gets its own client type, `KirimDokuLeg
     `encryptionKey pl6jn16fvkb64fit`): `Ping` → `{"status":0,"message":"Ok"}`; `CashInInquiry`
     (channel `07` Bank, BCA account) → real resolved account holder name, proving genuine sandbox
     connectivity (not a canned response).
-  - `CashInRemit`/`TransactionInfo`/`CheckBalance` response shapes follow the docs but are **not
-    yet exercised against a live call** — verify field names before trusting them in production.
+  - **`CashInInquiry`'s response is significantly richer than the docs summarize** — `fund` and
+    `beneficiaryAccount` nest INSIDE `inquiry` (not top-level as the docs' prose implies), `fund.fees`
+    is a nested object (`total`/`currency`/`components`/`additionalFee`/`fixedFee`), and
+    `beneficiaryAccount` includes DOKU's own resolved bank master data. `CheckBalance`'s numeric
+    fields (`creditLimit` etc.) are JSON numbers, not strings. Both confirmed 2026-08-14.
+  - **`CashInRemit` blocked, unresolved 2026-08-14**: real staging consistently rejects with
+    `status: 11` (`errors: {"beneficiary.country": ["Invalid value"], "sender.personalIdCountry":
+    ["Invalid value"]}`) — tried `"ID"`, `"IDN"`, `"360"` (ISO numeric), `"Indonesia"`, and an
+    object form `{"code": "ID"}` (which broke differently: `"": ["Invalid parameter null"]`), none
+    accepted. Also needed (undocumented) top-level `senderCountry`/`senderCurrency`/
+    `beneficiaryCountry`/`beneficiaryCurrency` on the remit request, same as inquiry, before those
+    two fields became the only remaining errors — so the request shape is otherwise right. Ask DOKU
+    support for the accepted value/format before spending more sandbox calls guessing (same lesson
+    as the DGPC `customerNo` incident above — don't guess a provisioning/format field blind).
+    `TransactionInfo` is unexercised entirely (no successful remit yet to look up).
 - Go's stdlib intentionally has no ECB cipher mode (it's normally insecure) — `sign()` in
   `kirimdoku_legacy.go` implements AES-ECB-PKCS7 manually, block by block, to match DOKU's Java
   sample (`Cipher.getInstance("AES")`'s bare default is ECB/PKCS5, equivalent to PKCS7 at 16-byte

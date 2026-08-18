@@ -109,22 +109,67 @@ type KirimDokuLegacyCurrency struct {
 	Code string `json:"code"`
 }
 
+type KirimDokuLegacyFundAmount struct {
+	Amount   float64 `json:"amount"`
+	Currency string  `json:"currency"`
+}
+
+type KirimDokuLegacyFeeComponent struct {
+	Description string  `json:"description,omitempty"`
+	Amount      float64 `json:"amount"`
+}
+
+type KirimDokuLegacyFees struct {
+	Total         float64                       `json:"total"`
+	Currency      string                        `json:"currency,omitempty"`
+	Components    []KirimDokuLegacyFeeComponent `json:"components,omitempty"`
+	AdditionalFee float64                       `json:"additionalFee,omitempty"`
+	FixedFee      float64                       `json:"fixedFee,omitempty"`
+}
+
+// KirimDokuLegacyFund — confirmed against a real inquiry response 2026-08-14:
+// nested under KirimDokuLegacyInquiryData.Fund, NOT top-level on the
+// response (the docs' summary omits this nesting).
 type KirimDokuLegacyFund struct {
-	Origin      string `json:"origin,omitempty"`
-	Destination string `json:"destination,omitempty"`
-	Fees        string `json:"fees,omitempty"`
+	Origin      KirimDokuLegacyFundAmount `json:"origin,omitempty"`
+	Fees        KirimDokuLegacyFees       `json:"fees,omitempty"`
+	Destination KirimDokuLegacyFundAmount `json:"destination,omitempty"`
+}
+
+// KirimDokuLegacyResolvedBank is DOKU's own bank master data, filled in from
+// just beneficiaryAccount.bank.id in the request — confirmed against a real
+// inquiry response 2026-08-14 (groupBank/province/dcBankId/institutionCode
+// also present on the wire but not modeled here, unused).
+type KirimDokuLegacyResolvedBank struct {
+	ID          string `json:"id"`
+	Code        string `json:"code,omitempty"`
+	Name        string `json:"name,omitempty"`
+	City        string `json:"city,omitempty"`
+	CountryCode string `json:"countryCode,omitempty"`
+}
+
+// KirimDokuLegacyResolvedBeneficiaryAccount is the inquiry response's
+// resolved account detail (Name is DOKU's own lookup of the account holder,
+// e.g. from a real BCA account) — a different shape than the REQUEST-side
+// KirimDokuLegacyBeneficiaryAccount, confirmed 2026-08-14.
+type KirimDokuLegacyResolvedBeneficiaryAccount struct {
+	Number  string                      `json:"number"`
+	Name    string                      `json:"name,omitempty"`
+	City    string                      `json:"city,omitempty"`
+	Address string                      `json:"address,omitempty"`
+	Bank    KirimDokuLegacyResolvedBank `json:"bank"`
 }
 
 type KirimDokuLegacyInquiryData struct {
-	IDToken string `json:"idToken"`
+	IDToken            string                                    `json:"idToken"`
+	Fund               KirimDokuLegacyFund                       `json:"fund,omitempty"`
+	BeneficiaryAccount KirimDokuLegacyResolvedBeneficiaryAccount `json:"beneficiaryAccount,omitempty"`
 }
 
 type KirimDokuLegacyInquiryResponse struct {
-	Status             int                                `json:"status"`
-	Message            string                             `json:"message,omitempty"`
-	Inquiry            KirimDokuLegacyInquiryData         `json:"inquiry"`
-	Fund               KirimDokuLegacyFund                `json:"fund,omitempty"`
-	BeneficiaryAccount *KirimDokuLegacyBeneficiaryAccount `json:"beneficiaryAccount,omitempty"`
+	Status  int                        `json:"status"`
+	Message string                     `json:"message,omitempty"`
+	Inquiry KirimDokuLegacyInquiryData `json:"inquiry"`
 }
 
 type KirimDokuLegacyPersonalID struct {
@@ -176,6 +221,10 @@ type KirimDokuLegacyRemitResponse struct {
 	Message string                   `json:"message,omitempty"`
 	Warning string                   `json:"warning,omitempty"`
 	Remit   KirimDokuLegacyRemitData `json:"remit"`
+	// Errors is populated on status=11 ("Invalid parameters") — per-field
+	// validation messages, e.g. {"beneficiary.country": ["Invalid value"]}.
+	// Confirmed against a real staging response 2026-08-14; not in the docs.
+	Errors map[string][]string `json:"errors,omitempty"`
 }
 
 // KirimDokuLegacyTransactionLog carries the human-readable status/reference
