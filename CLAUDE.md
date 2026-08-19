@@ -33,11 +33,29 @@ via a `replace` directive during development (see root `core-api/go.mod`).
   `customerNo = "9"` alone succeeds immediately. Per-bank prefix comes from DOKU's dashboard "BIN
   Rules" page ("Prefix Customer No" column), not something to guess.
 - **`CheckStatus`'s `virtualAccountNo` for a DGPC-created VA is the short literal
-  `partnerServiceId + customerNo` (e.g. `"   19008" + "9"`) — NOT the full DOKU-generated number**
-  from `CreateVAResponseData.VirtualAccountNo` (that's only for display/payment). Confirmed 2026-07-11.
-  **`DeleteVA`'s requirement is still unconfirmed** — neither the short combo (`4043119 Invalid
-  Bill/Virtual Account`) nor the full generated number (`4033115 ... virtualAccountNo should be
-  equal to partnerServiceId + customerNo`) succeeds. Flagged in `integration_test.go`, not solved.
+  `partnerServiceId + customerNo` (e.g. `"   19008" + "9"`, using the SHORT `customerNo` WE sent) —
+  NOT the full DOKU-generated number** from `CreateVAResponseData.VirtualAccountNo` (that's only for
+  display/payment). Confirmed 2026-07-11.
+- **`UpdateVA`/`DeleteVA` need a DIFFERENT `CustomerNo`/`VirtualAccountNo` convention than
+  `CheckStatus`** — confirmed against real DOKU sandbox 2026-08-19, resolving a long-standing
+  contradiction (previously both "short" and "full" forms failed, with two different error codes,
+  because the actual fix needed BOTH corrections at once, not either alone):
+  1. Use the **DOKU-GENERATED `CustomerNo`** from `CreateVAResponseData.CustomerNo` (e.g.
+     `"90000161862"`, not the short `"9"` we originally sent) — with `VirtualAccountNo` set to
+     `CreateVAResponseData.VirtualAccountNo` (the full number, e.g. `"   1900890000161862"`).
+     Using the short `CustomerNo` here produces DOKU's confusing
+     `4033115 ... virtualAccountNo should be equal to partnerServiceId + customerNo` — which is
+     DOKU telling you the customerNo you're combining it with is wrong, not the virtualAccountNo.
+  2. Set `AdditionalInfo.Channel` (e.g. `"VIRTUAL_ACCOUNT_BCA"`, matching
+     `CreateVAResponseData.AdditionalInfo.Channel`) — omitting it fails with
+     `400280x Invalid Mandatory Field {additionalInfo.channel}` on both Update and Delete.
+  3. **`DeleteVA` additionally requires `TrxID` to match the ORIGINAL `CreateVA` call's `TrxID`
+     exactly** — a fresh/different `TrxID` fails with `4043119 Invalid Bill/Virtual Account` even
+     with the correct `CustomerNo`/`VirtualAccountNo`/`Channel` from steps 1–2. `UpdateVA` does NOT
+     have this requirement (a fresh `TrxID` works fine there).
+  With all of the above, `UpdateVA` → `2002800 Successful` and `DeleteVA` → `2003100 Successful`,
+  confirmed directly against `api-sandbox.doku.com` (not just ASPI's simulator). Order does not
+  matter otherwise — Delete works immediately after Create, no Update step required first.
 
 ## VA Direct Inquiry (DIPC) — Token URL / Inquiry URL support
 

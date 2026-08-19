@@ -71,24 +71,31 @@ func TestIntegration_CreateStaticVA_CheckStatus_DeleteVA_RoundTrip(t *testing.T)
 	// against the real sandbox), not to assert a specific payment state.
 	t.Logf("CheckStatus response: %+v", statusResp)
 
-	// DeleteVA's virtualAccountNo requirement for a DGPC-created VA is
-	// UNCONFIRMED: the short partnerServiceId+customerNo combo that
-	// CheckStatus accepts fails DeleteVA with "4043119 Invalid Bill/Virtual
-	// Account", and the full DOKU-generated number fails with "4033115...
-	// virtualAccountNo should be equal to partnerServiceId + customerNo" —
-	// neither works. Not resolved as of 2026-07-11; logged, not asserted, so
-	// this test still proves auth/signing works without blocking on this gap.
+	// DeleteVA (and UpdateVA) need a DIFFERENT CustomerNo/VirtualAccountNo
+	// convention than CheckStatus — confirmed against real sandbox 2026-08-19,
+	// see CLAUDE.md: use the DOKU-GENERATED CustomerNo/VirtualAccountNo from
+	// createResp (not the short customerNo/requestVirtualAccountNo above,
+	// those are CheckStatus-only), AND DeleteVA's TrxID must match the
+	// ORIGINAL CreateVA call's TrxID exactly (a fresh TrxID fails with
+	// "4043119 Invalid Bill/Virtual Account" even with the right
+	// CustomerNo/VirtualAccountNo/Channel).
+	generatedCustomerNo := createResp.VirtualAccountData.CustomerNo
+	generatedVirtualAccountNo := createResp.VirtualAccountData.VirtualAccountNo
+
 	deleteResp, err := gw.DeleteVA(&DeleteVARequest{
 		PartnerServiceID: partnerServiceID,
-		CustomerNo:       customerNo,
-		VirtualAccountNo: requestVirtualAccountNo,
-		TrxID:            "IT-DEL-" + customerNo,
+		CustomerNo:       generatedCustomerNo,
+		VirtualAccountNo: generatedVirtualAccountNo,
+		TrxID:            trxID,
 		AdditionalInfo:   vaAdditionalInfoRef{Channel: BankChannels[bank]},
 	})
 	if err != nil {
 		t.Fatalf("DeleteVA: %v", err)
 	}
-	t.Logf("DeleteVA response (see comment above, not asserted): %s %s", deleteResp.ResponseCode, deleteResp.ResponseMessage)
+	if deleteResp.ErrorStatus {
+		t.Fatalf("DeleteVA failed: %s %s", deleteResp.ResponseCode, deleteResp.ResponseMessage)
+	}
+	t.Logf("DeleteVA response: %s %s", deleteResp.ResponseCode, deleteResp.ResponseMessage)
 }
 
 func TestIntegrationFail_CreateVA_InvalidPartnerServiceID(t *testing.T) {
