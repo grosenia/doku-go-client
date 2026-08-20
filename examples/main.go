@@ -249,7 +249,9 @@ func main() {
 			logFail(fmt.Sprintf("%s: %s", resp.ResponseCode, resp.ResponseMessage))
 			return
 		}
-		logOK(fmt.Sprintf("name=%s avaliableBalance=%s %s", resp.Name, resp.AccountInfos.AvaliableBalance.Value, resp.AccountInfos.AvaliableBalance.Currency))
+		for _, info := range resp.AccountInfos {
+			logOK(fmt.Sprintf("name=%s availableBalance=%s %s", resp.Name, info.AvailableBalance.Value, info.AvailableBalance.Currency))
+		}
 
 	case "kirimdoku-ping":
 		logBanner("KIRIMDOKU Legacy Ping")

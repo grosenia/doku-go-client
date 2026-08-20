@@ -138,24 +138,27 @@ func TestScenario11_BalanceInquiry_Success(t *testing.T) {
 			w.WriteHeader(http.StatusOK)
 			_ = json.NewEncoder(w).Encode(BalanceInquiryResponse{
 				ErrorResponse: ErrorResponse{ResponseCode: "2001100", ResponseMessage: "Successful"},
-				AccountNo:     "1234567890123456",
-				Name:          "PT Grosenia Niaga Indonesia",
-				AccountInfos: BalanceInquiryResponseAccountInfos{
-					AvaliableBalance: Amount{Value: "5000000.00", Currency: "IDR"},
+				AccountNo:     "A47438",
+				Name:          "Grosenia",
+				AccountInfos: []BalanceInquiryResponseAccountInfos{
+					{AvailableBalance: Amount{Value: "5000000.00", Currency: "IDR"}},
 				},
 			})
 		},
 	)
 
-	resp, err := gw.BalanceInquiry(&BalanceInquiryRequest{AccountNo: "1234567890123456"})
+	// AccountNo is the KirimDOKU agentKey, not a bank account number —
+	// confirmed against real sandbox 2026-08-20 (see doc comment on
+	// BalanceInquiryRequest).
+	resp, err := gw.BalanceInquiry(&BalanceInquiryRequest{AccountNo: "A47438"})
 	if err != nil {
 		t.Fatalf("BalanceInquiry error: %v", err)
 	}
 	if resp.ErrorStatus {
 		t.Fatalf("unexpected ErrorStatus, response: %+v", resp)
 	}
-	if resp.AccountInfos.AvaliableBalance.Value != "5000000.00" {
-		t.Fatalf("AvaliableBalance.Value = %q, want 5000000.00", resp.AccountInfos.AvaliableBalance.Value)
+	if len(resp.AccountInfos) != 1 || resp.AccountInfos[0].AvailableBalance.Value != "5000000.00" {
+		t.Fatalf("AccountInfos = %+v, want one entry with AvailableBalance.Value 5000000.00", resp.AccountInfos)
 	}
 }
 

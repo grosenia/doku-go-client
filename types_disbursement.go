@@ -99,23 +99,30 @@ type TransferBankResponse struct {
 
 // BalanceInquiryRequest checks Grosenia's own DOKU account balance before
 // disbursing — DOKU's docs list this as step 2 of the Kirim DOKU flow.
+//
+// AccountNo is NOT a bank account number — it's the agentKey issued when the
+// KirimDOKU merchant sandbox account was created (e.g. "A47438"), confirmed
+// by DOKU support 2026-08-20 after every bank-account-shaped guess returned
+// "4041108 Invalid Merchant".
 type BalanceInquiryRequest struct {
 	PartnerReferenceNo string `json:"partnerReferenceNo,omitempty"` // max 64
-	AccountNo          string `json:"accountNo"`                    // max 16
+	AccountNo          string `json:"accountNo"`                    // max 16, = KirimDOKU agentKey
 }
 
 type BalanceInquiryResponseAccountInfos struct {
 	HoldAmount Amount `json:"holdAmount"`
-	// AvaliableBalance is spelled exactly as DOKU's own API returns it
-	// (missing the second "a" in "Available") — do not "fix" the JSON tag,
-	// it must match the wire format.
-	AvaliableBalance Amount `json:"avaliableBalance"`
+	// AvailableBalance's JSON tag was "avaliableBalance" (missing an "a")
+	// until 2026-08-20 — that was our own guess, never confirmed against a
+	// real response. A real sandbox call (accountNo=agentKey) came back with
+	// the correctly-spelled "availableBalance" and AccountInfos as an ARRAY,
+	// not a single object — both fixed together here.
+	AvailableBalance Amount `json:"availableBalance"`
 }
 
 type BalanceInquiryResponse struct {
-	AccountNo      string                             `json:"accountNo"`
-	Name           string                             `json:"name"`
-	AccountInfos   BalanceInquiryResponseAccountInfos `json:"accountInfos"`
+	AccountNo      string                                `json:"accountNo"`
+	Name           string                                `json:"name"`
+	AccountInfos   []BalanceInquiryResponseAccountInfos `json:"accountInfos"`
 	AdditionalInfo struct {
 		CreditAlertLimit Amount `json:"creditAlertLimit,omitempty"`
 	} `json:"additionalInfo,omitempty"`
