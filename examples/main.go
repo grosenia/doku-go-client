@@ -368,6 +368,11 @@ func main() {
 	case "card-payment-page":
 		logBanner("Credit Card - Create Payment Page")
 		amountStr := arg(2, "90000")
+		// paymentType arg lets "card-payment-page 90000 AUTHORIZE" generate an
+		// AUTHORIZE-type page — needed before Capture can be tested, since
+		// Capture requires a real authorize_id from a completed AUTHORIZE
+		// transaction (SALE settles immediately, nothing to capture).
+		paymentType := arg(3, dokugo.PaymentTypeSale)
 		var amount int64
 		if _, err := fmt.Sscanf(amountStr, "%d", &amount); err != nil {
 			logFail(fmt.Sprintf("invalid amount %q: %v", amountStr, err))
@@ -386,7 +391,7 @@ func main() {
 				Phone: "6281122334455",
 			},
 			Payment: dokugo.PaymentPagePayment{
-				Type: dokugo.PaymentTypeSale,
+				Type: paymentType,
 			},
 		})
 		if err != nil {
@@ -397,7 +402,39 @@ func main() {
 			logFail(fmt.Sprintf("%s: %s (%s)", resp.Errors.Code, resp.Errors.Message, resp.Errors.Type))
 			return
 		}
-		logOK(fmt.Sprintf("invoiceNumber=%s paymentPageUrl=%s", invoiceNumber, resp.CreditCardPaymentPage.URL))
+		logOK(fmt.Sprintf("invoiceNumber=%s type=%s paymentPageUrl=%s", invoiceNumber, paymentType, resp.CreditCardPaymentPage.URL))
+
+	case "card-capture":
+		logBanner("Credit Card - Capture")
+		authorizeID := arg(2, "")
+		if authorizeID == "" {
+			logFail("usage: card-capture <authorize_id> [capture_amount]")
+			return
+		}
+		var captureAmount int64
+		if amountStr := arg(3, ""); amountStr != "" {
+			if _, err := fmt.Sscanf(amountStr, "%d", &captureAmount); err != nil {
+				logFail(fmt.Sprintf("invalid capture_amount %q: %v", amountStr, err))
+				return
+			}
+		}
+		cc := mustCreditCardClient(props)
+		resp, err := cc.Capture(&dokugo.CaptureRequest{
+			Payment: dokugo.CapturePaymentRequest{
+				AuthorizeID:   authorizeID,
+				CaptureAmount: captureAmount,
+			},
+		})
+		if err != nil {
+			logFail(err.Error())
+			return
+		}
+		if resp.ErrorStatus {
+			logFail(fmt.Sprintf("%s: %s (%s)", resp.Errors.Code, resp.Errors.Message, resp.Errors.Type))
+			return
+		}
+		logOK(fmt.Sprintf("invoiceNumber=%s status=%s responseCode=%s responseMessage=%s",
+			resp.Order.InvoiceNumber, resp.Payment.Status, resp.Payment.ResponseCode, resp.Payment.ResponseMessage))
 
 	default:
 		fmt.Println("unknown command:", command)
