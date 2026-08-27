@@ -183,11 +183,15 @@ Bearer-token + HMAC/RSA scheme — so it gets its own client type, `KirimDokuLeg
 ## Credit/debit card (Card product) — separate system, separate client, EXPERIMENTAL
 
 Added 2026-08-24 on the `doku-card-integration` branch (an explicitly experimental "coba-coba"
-branch per the user — not merged anywhere). A third completely separate DOKU system, alongside SNAP
-(VA/disbursement) and legacy KirimDOKU: non-SNAP, its own `Client-Id` namespace (`MCH-0001-...`, not
-SNAP's `BRN-...`), its own HMAC-SHA256 signature scheme, and its own host path family
-(`/credit-card/...`). Gets its own client type, `CreditCardClient` (`credit_card.go`/
-`types_credit_card.go`), not `Client`/`Gateway`. Do not merge with the SNAP types.
+branch per the user — not merged anywhere). A third separate DOKU system, alongside SNAP
+(VA/disbursement) and legacy KirimDOKU: non-SNAP, its own HMAC-SHA256 signature scheme, and its own
+host path family (`/credit-card/...`). **Reuses SNAP's same Client-Id/Secret Key** though — confirmed
+2026-08-27 against real sandbox, Grosenia's existing `BRN-0268-...`/`SK-QbTL...` credential worked
+unchanged, no separate registration needed (an earlier version of this note assumed a separate
+`MCH-0001-...`-namespaced credential was required, based only on DOKU's docs using that as a generic
+example value in isolation — that assumption was wrong, confirmed live). Gets its own client type,
+`CreditCardClient` (`credit_card.go`/`types_credit_card.go`), not `Client`/`Gateway`, since the
+signature scheme still differs — do not merge with the SNAP types.
 
 - **Non-PCI-DSS path chosen deliberately** — Grosenia isn't PCI-DSS certified, so this implements
   the "Payment Page" flow (`CreatePaymentPage` → hosted URL the customer completes payment on,
@@ -204,13 +208,14 @@ SNAP's `BRN-...`), its own HMAC-SHA256 signature scheme, and its own host path f
   no caching needed (unlike SNAP's `getAccessToken()`).
 - **Implemented so far**: `CreatePaymentPage` (generate the hosted payment URL/DOKU JS session) and
   `Capture` (second step of an AUTHORIZE transaction, must be called within DOKU's 7-day window).
-  Both structurally tested against an `httptest` mock (`credit_card_test.go`) — the mock verifies
-  headers are present/well-formed and the response unmarshals correctly, but **not verified against
-  real DOKU sandbox** — Grosenia doesn't have a registered `Client-Id`/Secret Key for this specific
-  product yet (a separate DOKU Back Office registration from the SNAP `BRN-0268-...` credentials
-  already in use). Do not assume the request/response shapes are byte-exact-correct until a real
-  sandbox round-trip confirms them — same lesson as every other DOKU integration in this repo
-  (`customerNo`, `avaliableBalance`, etc. all turned out subtly wrong from docs alone).
+  `CreatePaymentPage` confirmed working against real sandbox 2026-08-27 (`examples/main.go`'s
+  `card-payment-page` command, real `BRN-0268-...` credentials, got back a genuine
+  `sandbox.doku.com/wt-frontend-transaction/dynamic-payment-page` URL). Also structurally tested
+  against an `httptest` mock (`credit_card_test.go`). Found and fixed one real docs-vs-reality bug
+  along the way: DOKU's error response key is singular `error`, not `errors` as
+  developers.doku.com's own sample shows — same category of docs mismatch as `customerNo`/
+  `avaliableBalance` elsewhere in this repo. `Capture` itself is still unverified against real
+  sandbox (needs a real AUTHORIZE transaction's `authorize_id` first, not yet exercised).
 - **Not implemented yet**: MOTO/Recurring (require the H2H API, out of scope for non-PCI-DSS),
   DOKU JS client-side integration (the `credit_card_js.session_id` field is modeled in the response
   type but nothing consumes it), inbound payment notification/webhook handling (this product's

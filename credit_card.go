@@ -20,12 +20,18 @@ const (
 )
 
 // CreditCardClient talks to DOKU's Card product (Payment Page / DOKU JS,
-// non-PCI-DSS path) — a separate credential set and signature scheme from
-// the SNAP Client/Gateway used elsewhere in this package (see
-// types_credit_card.go's package doc comment). ClientID here is this
-// product's own Client-Id (e.g. "MCH-0001-..."), not SNAP's "BRN-..." one —
-// don't assume they're interchangeable without confirming against DOKU's
-// dashboard.
+// non-PCI-DSS path) — a different signature scheme from the SNAP
+// Client/Gateway used elsewhere in this package (see types_credit_card.go's
+// package doc comment), but confirmed 2026-08-27 against real sandbox to
+// reuse the SAME credentials as SNAP: Grosenia's existing "BRN-0268-..."
+// Client-Id + Secret Key (from dashboard.doku.com's Settings > API Keys,
+// same page as SNAP's) worked here unchanged, no separate "MCH-..."
+// registration needed. An earlier version of this comment claimed a
+// separate credential was required, based only on DOKU's docs using an
+// "MCH-..." example value in isolation — that was wrong, don't reintroduce
+// it. The dashboard's API Keys page also shows a third value, "API Key"
+// (format "doku_key_sandbox_..."), unused by Payment Page/Capture — not yet
+// confirmed what it's for, possibly DOKU JS client-side embedding.
 type CreditCardClient struct {
 	BaseURL    string
 	ClientID   string

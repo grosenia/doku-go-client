@@ -1,14 +1,17 @@
 package dokugo
 
-// Credit/debit card payment (DOKU's "Card" product) is a completely separate
-// system from everything else in this package — non-SNAP, its own
-// HMAC-SHA256 signature scheme (see credit_card.go's signNonSNAP), its own
-// Client-Id namespace (e.g. "MCH-0001-...", not SNAP's "BRN-...") and its
-// own host path family (`/credit-card/...`, not `/snap/v1.1/...`). Captured
-// 2026-08-24 from developers.doku.com's "Payment Page Integration Guide"
-// (non-PCI-DSS path — Grosenia isn't PCI-DSS certified, so the H2H path
-// that handles raw card data directly doesn't apply). Do not mix these
-// types with the SNAP VA/disbursement types elsewhere in this package.
+// Credit/debit card payment (DOKU's "Card" product) is a separate system
+// from everything else in this package — non-SNAP, its own HMAC-SHA256
+// signature scheme (see credit_card.go's signNonSNAP) and its own host path
+// family (`/credit-card/...`, not `/snap/v1.1/...`). It DOES reuse the same
+// Client-Id/Secret Key as SNAP, though (confirmed 2026-08-27 against real
+// sandbox — Grosenia's "BRN-0268-..." credential worked unchanged; DOKU's
+// docs example showing an "MCH-0001-..." Client-Id was just a generic
+// placeholder, not proof of a separate namespace). Captured 2026-08-24 from
+// developers.doku.com's "Payment Page Integration Guide" (non-PCI-DSS path —
+// Grosenia isn't PCI-DSS certified, so the H2H path that handles raw card
+// data directly doesn't apply). Do not mix these types with the SNAP
+// VA/disbursement types elsewhere in this package.
 
 // PaymentPageOrder is CreatePaymentPageRequest's "order" object.
 type PaymentPageOrder struct {
