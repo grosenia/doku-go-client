@@ -390,6 +390,13 @@ func main() {
 				Email: "buyer@example.com",
 				Phone: "6281122334455",
 			},
+			// Dashboard has no configured Notification URL for this product yet
+			// (confirmed 2026-08-27: a real completed AUTHORIZE payment produced
+			// zero inbound traffic to our debug endpoint) — override it per-request
+			// instead of hunting for a dashboard setting.
+			AdditionalInfo: &dokugo.PaymentPageAdditionalInfo{
+				OverrideNotificationURL: "https://intra-api.grosenia.co.id/v1/payments/doku/card/notification-debug",
+			},
 			Payment: dokugo.PaymentPagePayment{
 				Type: paymentType,
 			},
