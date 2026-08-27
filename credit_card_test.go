@@ -101,7 +101,7 @@ func TestCreditCardClient_CreatePaymentPage_ErrorResponse(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		_, _ = w.Write([]byte(`{"errors":{"code":"INVALID_PARAMETER","message":"Invalid Total Amount And Line Items","type":"Invalid Parameter"}}`))
+		_, _ = w.Write([]byte(`{"error":{"code":"INVALID_PARAMETER","message":"Invalid Total Amount And Line Items","type":"Invalid Parameter"}}`))
 	}))
 	defer server.Close()
 

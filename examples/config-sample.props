@@ -15,3 +15,10 @@ DOKU_CUSTOMER_NO_PREFIX=9
 KIRIMDOKU_LEGACY_AGENT_KEY=A00000
 KIRIMDOKU_LEGACY_ENCRYPTION_KEY=0123456789abcdef
 KIRIMDOKU_LEGACY_SANDBOX=true
+
+# Credit/debit Card product (Payment Page, non-PCI-DSS) — separate credentials,
+# separate system from both SNAP and KirimDOKU legacy above. Client-Id namespace
+# is "MCH-...", NOT the "BRN-..." one used for DOKU_CLIENT_ID.
+DOKU_CARD_CLIENT_ID=MCH-0000-0000000000000
+DOKU_CARD_SECRET_KEY=your-card-secret-key
+DOKU_CARD_SANDBOX=true

@@ -130,14 +130,21 @@ type CreatePaymentPageResponse struct {
 
 // CreditCardErrorResponse is DOKU's error shape for this product family —
 // deliberately NOT the SNAP ErrorResponse type (different field names,
-// nested under "errors"). Check ErrorStatus after every call, same
+// nested under "error"). Check ErrorStatus after every call, same
 // convention as the rest of this package.
+//
+// The JSON key is singular "error", NOT "errors" as
+// developers.doku.com's own "Payment Page Integration Guide" sample
+// response shows — confirmed wrong against a real sandbox call 2026-08-27
+// (`curl` with a deliberately-missing Client-Id returned
+// `{"error":{"code":"invalid_header_request","message":"Header Client-Id is required","type":"invalid_request_error"}}`).
+// Don't "fix" this back to match the docs.
 type CreditCardErrorResponse struct {
 	Errors struct {
 		Code    string `json:"code"`
 		Message string `json:"message"`
 		Type    string `json:"type"`
-	} `json:"errors"`
+	} `json:"error"`
 	ErrorStatus bool `json:"-"`
 }
 

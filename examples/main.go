@@ -53,6 +53,11 @@ func mustKirimDokuLegacyClient(props map[string]string) *dokugo.KirimDokuLegacyC
 	return dokugo.NewKirimDokuLegacyClient(props["KIRIMDOKU_LEGACY_AGENT_KEY"], props["KIRIMDOKU_LEGACY_ENCRYPTION_KEY"], sandbox)
 }
 
+func mustCreditCardClient(props map[string]string) *dokugo.CreditCardClient {
+	sandbox := props["DOKU_CARD_SANDBOX"] != "false"
+	return dokugo.NewCreditCardClient(props["DOKU_CARD_CLIENT_ID"], props["DOKU_CARD_SECRET_KEY"], sandbox)
+}
+
 func arg(i int, fallback string) string {
 	if i < len(os.Args) {
 		return os.Args[i]
@@ -359,6 +364,40 @@ func main() {
 			return
 		}
 		logOK(fmt.Sprintf("id=%s status=%s statusMessage=%s", resp.Transaction.ID, resp.Transaction.Status, resp.Transaction.TransactionLog.StatusMessage))
+
+	case "card-payment-page":
+		logBanner("Credit Card - Create Payment Page")
+		amountStr := arg(2, "90000")
+		var amount int64
+		if _, err := fmt.Sscanf(amountStr, "%d", &amount); err != nil {
+			logFail(fmt.Sprintf("invalid amount %q: %v", amountStr, err))
+			return
+		}
+		cc := mustCreditCardClient(props)
+		invoiceNumber := fmt.Sprintf("FUNCTEST-CARD-%d", time.Now().Unix())
+		resp, err := cc.CreatePaymentPage(&dokugo.CreatePaymentPageRequest{
+			Order: dokugo.PaymentPageOrder{
+				InvoiceNumber: invoiceNumber,
+				Amount:        amount,
+				AutoRedirect:  false,
+			},
+			Customer: dokugo.PaymentPageCustomer{
+				Email: "buyer@example.com",
+				Phone: "6281122334455",
+			},
+			Payment: dokugo.PaymentPagePayment{
+				Type: dokugo.PaymentTypeSale,
+			},
+		})
+		if err != nil {
+			logFail(err.Error())
+			return
+		}
+		if resp.ErrorStatus {
+			logFail(fmt.Sprintf("%s: %s (%s)", resp.Errors.Code, resp.Errors.Message, resp.Errors.Type))
+			return
+		}
+		logOK(fmt.Sprintf("invoiceNumber=%s paymentPageUrl=%s", invoiceNumber, resp.CreditCardPaymentPage.URL))
 
 	default:
 		fmt.Println("unknown command:", command)
