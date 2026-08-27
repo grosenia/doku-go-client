@@ -180,6 +180,44 @@ Bearer-token + HMAC/RSA scheme — so it gets its own client type, `KirimDokuLeg
   whether production KirimDOKU should use this legacy path or the SNAP path built elsewhere in this
   package (question sent to DOKU support 2026-08-14, unanswered as of this writing).
 
+## Credit/debit card (Card product) — separate system, separate client, EXPERIMENTAL
+
+Added 2026-08-24 on the `doku-card-integration` branch (an explicitly experimental "coba-coba"
+branch per the user — not merged anywhere). A third completely separate DOKU system, alongside SNAP
+(VA/disbursement) and legacy KirimDOKU: non-SNAP, its own `Client-Id` namespace (`MCH-0001-...`, not
+SNAP's `BRN-...`), its own HMAC-SHA256 signature scheme, and its own host path family
+(`/credit-card/...`). Gets its own client type, `CreditCardClient` (`credit_card.go`/
+`types_credit_card.go`), not `Client`/`Gateway`. Do not merge with the SNAP types.
+
+- **Non-PCI-DSS path chosen deliberately** — Grosenia isn't PCI-DSS certified, so this implements
+  the "Payment Page" flow (`CreatePaymentPage` → hosted URL the customer completes payment on,
+  DOKU never sends raw card data to us) rather than the H2H path (which handles raw card PANs
+  directly and requires PCI-DSS certification).
+- **Signature formula** (confirmed 2026-08-24 from developers.doku.com's "Signature Component from
+  Request Header" page, verbatim worked example — see `signNonSNAP`'s doc comment for the exact
+  string-to-sign): `Client-Id:`/`Request-Id:`/`Request-Timestamp:`/`Request-Target:`/`Digest:` each
+  on their own line joined by `\n`, no trailing newline, HMAC-SHA256 over that with the Secret Key,
+  base64, prefixed `HMACSHA256=`. `Digest` (base64 of SHA-256 of the raw JSON body) is POST-only —
+  GET requests (e.g. a future Check Status call) omit that line entirely. Timestamp format matches
+  SNAP's asymmetric endpoint: UTC, no offset (`2020-08-11T08:45:42Z`).
+- **No access-token flow at all** for this product — every header is per-request, no Bearer token,
+  no caching needed (unlike SNAP's `getAccessToken()`).
+- **Implemented so far**: `CreatePaymentPage` (generate the hosted payment URL/DOKU JS session) and
+  `Capture` (second step of an AUTHORIZE transaction, must be called within DOKU's 7-day window).
+  Both structurally tested against an `httptest` mock (`credit_card_test.go`) — the mock verifies
+  headers are present/well-formed and the response unmarshals correctly, but **not verified against
+  real DOKU sandbox** — Grosenia doesn't have a registered `Client-Id`/Secret Key for this specific
+  product yet (a separate DOKU Back Office registration from the SNAP `BRN-0268-...` credentials
+  already in use). Do not assume the request/response shapes are byte-exact-correct until a real
+  sandbox round-trip confirms them — same lesson as every other DOKU integration in this repo
+  (`customerNo`, `avaliableBalance`, etc. all turned out subtly wrong from docs alone).
+- **Not implemented yet**: MOTO/Recurring (require the H2H API, out of scope for non-PCI-DSS),
+  DOKU JS client-side integration (the `credit_card_js.session_id` field is modeled in the response
+  type but nothing consumes it), inbound payment notification/webhook handling (this product's
+  notification signature verification would need its own `Verify...` function mirroring
+  `VerifyWebhookSignature`, not yet written), Check Status (GET, no Digest — `signNonSNAP` already
+  supports the no-digest case for when this gets added).
+
 ## Adding a new bank
 
 Add an entry to `BankChannels` in `constants.go` — no other code changes needed for VA creation.
