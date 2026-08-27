@@ -206,22 +206,38 @@ signature scheme still differs — do not merge with the SNAP types.
   SNAP's asymmetric endpoint: UTC, no offset (`2020-08-11T08:45:42Z`).
 - **No access-token flow at all** for this product — every header is per-request, no Bearer token,
   no caching needed (unlike SNAP's `getAccessToken()`).
-- **Implemented so far**: `CreatePaymentPage` (generate the hosted payment URL/DOKU JS session) and
-  `Capture` (second step of an AUTHORIZE transaction, must be called within DOKU's 7-day window).
-  `CreatePaymentPage` confirmed working against real sandbox 2026-08-27 (`examples/main.go`'s
-  `card-payment-page` command, real `BRN-0268-...` credentials, got back a genuine
-  `sandbox.doku.com/wt-frontend-transaction/dynamic-payment-page` URL). Also structurally tested
-  against an `httptest` mock (`credit_card_test.go`). Found and fixed one real docs-vs-reality bug
-  along the way: DOKU's error response key is singular `error`, not `errors` as
-  developers.doku.com's own sample shows — same category of docs mismatch as `customerNo`/
-  `avaliableBalance` elsewhere in this repo. `Capture` itself is still unverified against real
-  sandbox (needs a real AUTHORIZE transaction's `authorize_id` first, not yet exercised).
+- **Implemented and CONFIRMED WORKING end-to-end against real sandbox, 2026-08-27**:
+  `CreatePaymentPage` (SALE and AUTHORIZE both tested) → real payment via
+  `sandbox.doku.com`'s dummy-card simulator → notification received → `Capture`. Full sequence:
+  1. `card-payment-page 90000 AUTHORIZE` generated a real hosted payment page URL.
+  2. Paid it with a dummy Mastercard (`5573381011111135`, "Non 3DS Success" scenario from
+     `sandbox.doku.com/integration/simulator/credit-card`) — DOKU's Back Office dashboard showed
+     the transaction as `Success`/`AUTHORIZE`, but **exposes no `authorize_id` field anywhere** (not
+     in the transaction detail page, not in `CreatePaymentPage`'s response) — confirmed by checking
+     both directly.
+  3. `payment.authorize_id` is ONLY ever delivered via the Card product's payment notification
+     webhook — and the dashboard has **no configured Notification URL for this product at all**
+     (confirmed: a real completed AUTHORIZE payment produced zero inbound traffic anywhere on our
+     dev host, app logs or nginx access log). Worked around entirely from our own request, no
+     dashboard hunting needed: set
+     `CreatePaymentPageRequest.AdditionalInfo.OverrideNotificationURL` to force delivery to a URL of
+     our choosing. See `types_credit_card.go`'s `CardNotification` for the real captured payload
+     shape (also genuinely different from what developers.doku.com's docs implied — flat top-level
+     `order`/`customer`/`transaction`/`service`/`acquirer`/`channel`/`card_payment`/`verification`
+     objects, no `errors` wrapper).
+  4. `Capture` with the real `authorize_id` → `2002400`-style success
+     (`responseCode="00" responseMessage="PAYMENT APPROVED" status="SUCCESS"`).
+  Also found and fixed one real docs-vs-reality bug along the way: DOKU's error response key is
+  singular `error`, not `errors` as developers.doku.com's own sample shows — same category of docs
+  mismatch as `customerNo`/`avaliableBalance` elsewhere in this repo.
 - **Not implemented yet**: MOTO/Recurring (require the H2H API, out of scope for non-PCI-DSS),
   DOKU JS client-side integration (the `credit_card_js.session_id` field is modeled in the response
-  type but nothing consumes it), inbound payment notification/webhook handling (this product's
-  notification signature verification would need its own `Verify...` function mirroring
-  `VerifyWebhookSignature`, not yet written), Check Status (GET, no Digest — `signNonSNAP` already
-  supports the no-digest case for when this gets added).
+  type but nothing consumes it), a REAL inbound notification handler with signature verification
+  (`doku_card_debug.go` in `core-api`'s `doku-card-integration` branch is a throwaway log-only stub
+  used to capture the payload above — delete once a real handler exists; this product's notification
+  signature verification would need its own `Verify...` function mirroring `VerifyWebhookSignature`),
+  Check Status (GET, no Digest — `signNonSNAP` already supports the no-digest case for when this
+  gets added).
 
 ## Adding a new bank
 

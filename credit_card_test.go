@@ -97,6 +97,39 @@ func TestCreditCardClient_CreatePaymentPage_Success(t *testing.T) {
 	}
 }
 
+func TestCardNotification_UnmarshalsRealCapturedPayload(t *testing.T) {
+	// Verbatim payload captured 2026-08-27 from a real sandbox AUTHORIZE
+	// transaction's notification (delivered via
+	// additional_info.override_notification_url).
+	raw := []byte(`{"order":{"invoice_number":"FUNCTEST-CARD-1787826055","amount":90000},"customer":{"name":"tujuh","email":"buyer@example.com"},"transaction":{"type":"AUTHORIZE","status":"PENDING","date":"2026-08-27T10:23:47Z","original_request_id":"d074028e2246fd758e4172bb1b59031c"},"service":{"id":"CREDIT_CARD"},"acquirer":{"id":"BANK_MANDIRI"},"channel":{"id":"CREDIT_CARD","name":"Credit Card"},"additional_info":{"override_notification_url":"https://intra-api.grosenia.co.id/v1/payments/doku/card/notification-debug"},"card_payment":{"masked_card_number":"557338******1101","approval_code":"081981","response_code":"00","response_message":"PAYMENT APPROVED","issuer":"PT BANK MANDIRI (PERSERO) Tbk","identifier":[{"name":"MID","value":"323052789944165"},{"name":"Acquirer","value":"BANK_MANDIRI"},{"name":"TID","value":"11783983"}],"authorize_id":"17878262273617612","brand":"MASTER","authentication_id":"640657752b1bd9b6898453bfd71723d0fa4fd19bda7788760a47fbbdada88fdd","three_d_secure_status":"TRUE"},"verification":{"status":"APPROVE","reason":"Decision No Rules Triggered"}}`)
+
+	var n CardNotification
+	if err := json.Unmarshal(raw, &n); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if n.Order.InvoiceNumber != "FUNCTEST-CARD-1787826055" {
+		t.Errorf("Order.InvoiceNumber = %q", n.Order.InvoiceNumber)
+	}
+	if n.Transaction.Type != "AUTHORIZE" {
+		t.Errorf("Transaction.Type = %q", n.Transaction.Type)
+	}
+	if n.CardPayment.AuthorizeID != "17878262273617612" {
+		t.Errorf("CardPayment.AuthorizeID = %q, want 17878262273617612", n.CardPayment.AuthorizeID)
+	}
+	if n.CardPayment.ResponseCode != "00" {
+		t.Errorf("CardPayment.ResponseCode = %q", n.CardPayment.ResponseCode)
+	}
+	if len(n.CardPayment.Identifier) != 3 {
+		t.Fatalf("len(Identifier) = %d, want 3", len(n.CardPayment.Identifier))
+	}
+	if n.CardPayment.Identifier[2].Name != "TID" || n.CardPayment.Identifier[2].Value != "11783983" {
+		t.Errorf("Identifier[2] = %+v", n.CardPayment.Identifier[2])
+	}
+	if n.Verification.Status != "APPROVE" {
+		t.Errorf("Verification.Status = %q", n.Verification.Status)
+	}
+}
+
 func TestCreditCardClient_CreatePaymentPage_ErrorResponse(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

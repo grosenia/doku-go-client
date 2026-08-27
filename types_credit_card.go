@@ -210,3 +210,59 @@ type CaptureResponse struct {
 	} `json:"card"`
 	CreditCardErrorResponse
 }
+
+// CardNotification is the body DOKU POSTs to the Card product's Notification
+// URL (or additional_info.override_notification_url) after a transaction —
+// captured verbatim 2026-08-27 from a real sandbox AUTHORIZE payment
+// notification. Genuinely different shape from what
+// developers.doku.com's docs implied elsewhere in this product (no
+// "errors"/"payment" top-level wrapper — flat top-level objects instead):
+// this is the authoritative source of payment.authorize_id, which is NOT
+// returned anywhere else (not in CreatePaymentPage's response, not in the
+// DOKU Back Office dashboard's transaction detail page — confirmed by
+// checking both first).
+type CardNotification struct {
+	Order struct {
+		InvoiceNumber string `json:"invoice_number"`
+		Amount        int64  `json:"amount"`
+	} `json:"order"`
+	Customer struct {
+		Name  string `json:"name,omitempty"`
+		Email string `json:"email,omitempty"`
+	} `json:"customer"`
+	Transaction struct {
+		Type              string `json:"type"` // SALE, AUTHORIZE, INSTALLMENT
+		Status            string `json:"status"`
+		Date              string `json:"date"`
+		OriginalRequestID string `json:"original_request_id"` // echoes the Request-Id from CreatePaymentPage
+	} `json:"transaction"`
+	Service struct {
+		ID string `json:"id"` // "CREDIT_CARD"
+	} `json:"service"`
+	Acquirer struct {
+		ID string `json:"id"`
+	} `json:"acquirer"`
+	Channel struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	} `json:"channel"`
+	AdditionalInfo struct {
+		OverrideNotificationURL string `json:"override_notification_url,omitempty"`
+	} `json:"additional_info,omitempty"`
+	CardPayment struct {
+		MaskedCardNumber   string              `json:"masked_card_number,omitempty"`
+		ApprovalCode       string              `json:"approval_code,omitempty"`
+		ResponseCode       string              `json:"response_code"`
+		ResponseMessage    string              `json:"response_message"`
+		Issuer             string              `json:"issuer,omitempty"`
+		Identifier         []CaptureIdentifier `json:"identifier,omitempty"`
+		AuthorizeID        string              `json:"authorize_id,omitempty"` // present when Transaction.Type is AUTHORIZE — pass to CaptureRequest
+		Brand              string              `json:"brand,omitempty"`
+		AuthenticationID   string              `json:"authentication_id,omitempty"`
+		ThreeDSecureStatus string              `json:"three_d_secure_status,omitempty"`
+	} `json:"card_payment"`
+	Verification struct {
+		Status string `json:"status"`
+		Reason string `json:"reason,omitempty"`
+	} `json:"verification,omitempty"`
+}
