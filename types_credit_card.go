@@ -112,14 +112,32 @@ type creditCardPaymentPage struct {
 	URL string `json:"url"`
 }
 
+// PaymentPlanCode is one of credit_card_js.payment_plan_codes — the installment/full-payment
+// options DOKU JS lets the customer choose from, only present alongside a real SessionID.
+type PaymentPlanCode struct {
+	Code        string `json:"code"`
+	Type        string `json:"type"` // e.g. "FULL_PAYMENT"
+	TotalAmount int64  `json:"total_amount"`
+	Currency    string `json:"currency"`
+}
+
 type creditCardJS struct {
-	SessionID string `json:"session_id"`
+	SessionID        string            `json:"session_id"`
+	PaymentPlanCodes []PaymentPlanCode `json:"payment_plan_codes,omitempty"`
 }
 
 // CreatePaymentPageResponse is what DOKU returns for a successful payment-page
 // request. CreditCardPaymentPage.URL is what the merchant shows the customer
 // (iframe or dedicated page); CreditCardJS.SessionID is only populated for
-// merchants using the DOKU JS integration instead.
+// merchants using the DOKU JS integration instead — confirmed EMPTY against
+// Grosenia's real sandbox merchant as of 2026-08-28 (same request that returns
+// a valid CreditCardPaymentPage.URL returns an empty SessionID). Per
+// developers.doku.com's Payment Page Integration Guide, this is a
+// merchant-level toggle DOKU enables on their side, not something requestable
+// per-call — same category as the customerNo/avaliableBalance/KirimDOKU
+// balance-account gotchas elsewhere in this package: ask DOKU support to
+// enable "DOKU JS integration" for the merchant before expecting a non-empty
+// SessionID here.
 type CreatePaymentPageResponse struct {
 	Order struct {
 		InvoiceNumber string                `json:"invoice_number"`

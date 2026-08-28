@@ -409,7 +409,7 @@ func main() {
 			logFail(fmt.Sprintf("%s: %s (%s)", resp.Errors.Code, resp.Errors.Message, resp.Errors.Type))
 			return
 		}
-		logOK(fmt.Sprintf("invoiceNumber=%s type=%s paymentPageUrl=%s", invoiceNumber, paymentType, resp.CreditCardPaymentPage.URL))
+		logOK(fmt.Sprintf("invoiceNumber=%s type=%s paymentPageUrl=%s dokuJsSessionId=%q", invoiceNumber, paymentType, resp.CreditCardPaymentPage.URL, resp.CreditCardJS.SessionID))
 
 	case "card-capture":
 		logBanner("Credit Card - Capture")

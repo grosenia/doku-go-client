@@ -238,10 +238,26 @@ signature scheme still differs — do not merge with the SNAP types.
   prefix. `core-api`'s `doku_card_debug.go` (throwaway log-only stub, no verification at all) should
   be replaced with a real handler using this function — see [[project_doku_card_integration]] for
   current status of that work.
-- **Not implemented yet**: MOTO/Recurring (require the H2H API, out of scope for non-PCI-DSS),
-  DOKU JS client-side integration (the `credit_card_js.session_id` field is modeled in the response
-  type but nothing consumes it), Check Status (GET, no Digest — `signNonSNAP` already supports the
-  no-digest case for when this gets added).
+- **DOKU JS client-side integration — BLOCKED on DOKU merchant config, confirmed 2026-08-28**: this
+  lets the merchant build its own card-entry form (own the UI, mirroring how `CreditCardPaymentPage`
+  works for Xendit) instead of redirecting to DOKU's hosted Payment Page — customer's card data is
+  still tokenized client-side via DOKU's own SDK
+  (`https://sandbox.doku.com/card-session/card-session-2.0.0.js` / prod's `app.doku.com` equivalent,
+  `PG.init({fields:{...}})` + `PG.payment.collectCardData({session_id, card_number, ...}, cb)`,
+  per developers.doku.com's "DOKU JS Integration Guide"), so Grosenia still never touches a raw PAN
+  and stays non-PCI-DSS. The session_id needed to drive that SDK comes from the SAME
+  `POST /credit-card/v1/payment-page` call `CreatePaymentPage` already makes — no separate endpoint
+  — but `credit_card_js.session_id` is **only populated when DOKU has enabled "DOKU JS integration"
+  for the merchant on their side**; it's not a per-request flag. Tested directly against Grosenia's
+  real sandbox merchant (`BRN-0268-...`) 2026-08-28: the exact same request that returns a valid
+  `credit_card_payment_page.url` returns an **empty** `credit_card_js.session_id`. Same category of
+  gotcha as `customerNo`/`avaliableBalance`/KirimDOKU's balance account elsewhere in this package —
+  ask DOKU support to enable it before expecting this to ever return non-empty. `PaymentPlanCode`/
+  `creditCardJS.PaymentPlanCodes` are modeled (added 2026-08-28) so the response is ready to consume
+  the moment DOKU flips the switch, but nothing can be tested end-to-end until then.
+- **Not implemented yet**: MOTO/Recurring (require the H2H API, out of scope for non-PCI-DSS), Check
+  Status (GET, no Digest — `signNonSNAP` already supports the no-digest case for when this gets
+  added).
 
 ## Adding a new bank
 
