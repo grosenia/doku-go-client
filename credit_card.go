@@ -115,6 +115,21 @@ func signNonSNAP(secretKey, clientID, requestID, timestamp, requestTarget, diges
 	return "HMACSHA256=" + base64.StdEncoding.EncodeToString(mac.Sum(nil))
 }
 
+// VerifyCardNotificationSignature verifies an inbound Card product
+// notification (see types_credit_card.go's CardNotification) — the inverse
+// of signNonSNAP, same constant-time-compare convention as
+// VerifyWebhookSignature elsewhere in this package. notificationTarget is
+// the merchant's OWN notification path (e.g. "/v1/payments/doku/card/notification"),
+// not DOKU's — same convention as every other inbound-verification function
+// in this package. Not yet exercised against a real DOKU-signed notification
+// (only the request-signing direction, signNonSNAP, has been confirmed live
+// as of 2026-08-27) — verify against a real captured Signature header before
+// relying on this to reject forged notifications in production.
+func VerifyCardNotificationSignature(secretKey, clientID, requestID, timestamp, notificationTarget string, rawBody []byte, signatureHeader string) bool {
+	expected := signNonSNAP(secretKey, clientID, requestID, timestamp, notificationTarget, digestBody(rawBody))
+	return hmac.Equal([]byte(expected), []byte(signatureHeader))
+}
+
 // doRequest marshals reqBody, signs per signNonSNAP, executes the request,
 // and unmarshals the response. Mirrors gateway.go's doRequest but for this
 // product's distinct header set (Client-Id/Request-Id/Request-Timestamp/

@@ -97,6 +97,36 @@ func TestCreditCardClient_CreatePaymentPage_Success(t *testing.T) {
 	}
 }
 
+func TestVerifyCardNotificationSignature_RealCapturedNotification(t *testing.T) {
+	// Verbatim data captured 2026-08-27 from a real DOKU-signed sandbox
+	// notification (headers + body), confirming VerifyCardNotificationSignature
+	// actually verifies real DOKU signatures, not just our own signNonSNAP output.
+	rawBody := []byte(`{"order":{"invoice_number":"FUNCTEST-CARD-1787826055","amount":90000},"customer":{"name":"tujuh","email":"buyer@example.com"},"transaction":{"type":"AUTHORIZE","status":"PENDING","date":"2026-08-27T10:23:47Z","original_request_id":"d074028e2246fd758e4172bb1b59031c"},"service":{"id":"CREDIT_CARD"},"acquirer":{"id":"BANK_MANDIRI"},"channel":{"id":"CREDIT_CARD","name":"Credit Card"},"additional_info":{"override_notification_url":"https://intra-api.grosenia.co.id/v1/payments/doku/card/notification-debug"},"card_payment":{"masked_card_number":"557338******1101","approval_code":"081981","response_code":"00","response_message":"PAYMENT APPROVED","issuer":"PT BANK MANDIRI (PERSERO) Tbk","identifier":[{"name":"MID","value":"323052789944165"},{"name":"Acquirer","value":"BANK_MANDIRI"},{"name":"TID","value":"11783983"}],"authorize_id":"17878262273617612","brand":"MASTER","authentication_id":"640657752b1bd9b6898453bfd71723d0fa4fd19bda7788760a47fbbdada88fdd","three_d_secure_status":"TRUE"},"verification":{"status":"APPROVE","reason":"Decision No Rules Triggered"}}`)
+
+	ok := VerifyCardNotificationSignature(
+		"SK-QbTL192wDWAGYLydPZsE",
+		"BRN-0268-1783481131809",
+		"CREDIT_CARD4605139620740696042707905868166483795498650276372334601842093866",
+		"2026-08-27T10:24:12Z",
+		"/v1/payments/doku/card/notification-debug", // the FULL external path DOKU actually called, matching override_notification_url
+		rawBody,
+		"HMACSHA256=+3NsEDZwtxVDlVKkYUNBsSZB41fUeftS/2aKjinNo54=",
+	)
+	if !ok {
+		t.Fatal("expected the real captured notification signature to verify")
+	}
+
+	// A tampered body must fail verification.
+	tampered := append([]byte(nil), rawBody...)
+	tampered[10] = 'X'
+	if VerifyCardNotificationSignature("SK-QbTL192wDWAGYLydPZsE", "BRN-0268-1783481131809",
+		"CREDIT_CARD4605139620740696042707905868166483795498650276372334601842093866",
+		"2026-08-27T10:24:12Z", "/v1/payments/doku/card/notification-debug", tampered,
+		"HMACSHA256=+3NsEDZwtxVDlVKkYUNBsSZB41fUeftS/2aKjinNo54=") {
+		t.Fatal("expected a tampered body to fail verification")
+	}
+}
+
 func TestCardNotification_UnmarshalsRealCapturedPayload(t *testing.T) {
 	// Verbatim payload captured 2026-08-27 from a real sandbox AUTHORIZE
 	// transaction's notification (delivered via

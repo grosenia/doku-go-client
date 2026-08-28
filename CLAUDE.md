@@ -230,14 +230,18 @@ signature scheme still differs — do not merge with the SNAP types.
   Also found and fixed one real docs-vs-reality bug along the way: DOKU's error response key is
   singular `error`, not `errors` as developers.doku.com's own sample shows — same category of docs
   mismatch as `customerNo`/`avaliableBalance` elsewhere in this repo.
+- **`VerifyCardNotificationSignature`** added and confirmed against the real captured notification
+  above (verifies true against the actual DOKU-signed headers/body; a tampered body correctly fails).
+  Request-Target for verification is the FULL external path DOKU actually called (e.g.
+  `/v1/payments/doku/card/notification-debug`, matching `override_notification_url` verbatim,
+  `/v1` prefix included) — not the internal `routes.go`-registered path minus the router's automatic
+  prefix. `core-api`'s `doku_card_debug.go` (throwaway log-only stub, no verification at all) should
+  be replaced with a real handler using this function — see [[project_doku_card_integration]] for
+  current status of that work.
 - **Not implemented yet**: MOTO/Recurring (require the H2H API, out of scope for non-PCI-DSS),
   DOKU JS client-side integration (the `credit_card_js.session_id` field is modeled in the response
-  type but nothing consumes it), a REAL inbound notification handler with signature verification
-  (`doku_card_debug.go` in `core-api`'s `doku-card-integration` branch is a throwaway log-only stub
-  used to capture the payload above — delete once a real handler exists; this product's notification
-  signature verification would need its own `Verify...` function mirroring `VerifyWebhookSignature`),
-  Check Status (GET, no Digest — `signNonSNAP` already supports the no-digest case for when this
-  gets added).
+  type but nothing consumes it), Check Status (GET, no Digest — `signNonSNAP` already supports the
+  no-digest case for when this gets added).
 
 ## Adding a new bank
 
