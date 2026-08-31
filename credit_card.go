@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -18,6 +19,11 @@ const (
 	pathCreatePaymentPage = "/credit-card/v1/payment-page"
 	pathCreditCardCapture = "/credit-card/capture"
 )
+
+// debugRawResponse is a temporary diagnostic toggle (DOKU_DEBUG_RAW_RESPONSE=1 env var) —
+// prints the raw response body doRequest receives before JSON unmarshaling, to rule out
+// struct-mapping bugs when a field seems unexpectedly empty.
+var debugRawResponse = os.Getenv("DOKU_DEBUG_RAW_RESPONSE") == "1"
 
 // CreditCardClient talks to DOKU's Card product (Payment Page / DOKU JS,
 // non-PCI-DSS path) — a different signature scheme from the SNAP
@@ -185,6 +191,9 @@ func (c *CreditCardClient) doRequest(method, path string, reqBody, respBody any)
 		return res.StatusCode, fmt.Errorf("doku: read response: %w", err)
 	}
 
+	if debugRawResponse {
+		fmt.Printf("[doku-debug] raw response body: %s\n", respBytes)
+	}
 	if len(respBytes) > 0 && respBody != nil {
 		if err := json.Unmarshal(respBytes, respBody); err != nil {
 			return res.StatusCode, fmt.Errorf("doku: unmarshal response: %w", err)

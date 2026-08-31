@@ -387,6 +387,8 @@ func main() {
 				AutoRedirect:  false,
 			},
 			Customer: dokugo.PaymentPageCustomer{
+				ID:    "TESTCUST-001",
+				Name:  "Test Buyer",
 				Email: "buyer@example.com",
 				Phone: "6281122334455",
 			},
