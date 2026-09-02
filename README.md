@@ -1,10 +1,12 @@
 # doku-go-client
 
-> **⚠️ Branch policy (DOKU integration):** `doku-integration` is the main/priority branch for DOKU
-> work (VA, disbursement, Tempo) — fix things there first. `doku-card-integration` is an
-> experimental "coba-coba" branch for card payment. **Do not merge `doku-card-integration` into
-> `doku-integration` or `main`.** Full exploration of card integration resumes only after
-> `doku-integration` has merged to `main` and is stable.
+> **⚠️ Branch policy (DOKU integration):** DOKU work in the other repos (core-api, api-web, etc.)
+> happens on their `doku-integration` branch — fix things there first, priority branch. This repo's
+> own DOKU work happens on `main` (its own established convention: branch → commit → merge to
+> `main` → tag). `doku-card-integration` is an experimental "coba-coba" branch for card payment.
+> **Do not merge `doku-card-integration` into `main`.** Full exploration of card integration
+> resumes only after the other repos' `doku-integration` work has merged to their `main` and is
+> stable.
 
 Go client for [DOKU](https://doku.com)'s SNAP (Standar Nasional Open API Pembayaran) payment API.
 Covers Virtual Account (Static and Non-static/single-use, sharing one `CreateVA` endpoint
